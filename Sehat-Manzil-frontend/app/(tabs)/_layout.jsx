@@ -4,7 +4,6 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 const TabIcon = ({ name, color, focused }) => {
-  // Add "-outline" to the icon name when inactive
   const iconName = focused ? name : `${name}-outline`;
 
   return (
@@ -39,12 +38,14 @@ const TabsLayout = () => {
           position: 'absolute', // Floating tab bar
           left: 20,
           right: 20,
-          borderRadius: 25, // Rounded corners
+          borderTopLeftRadius: 20, // Round only the top-left corner
+          borderTopRightRadius: 20, // Round only the top-right corner
           display: 'flex', // Ensure tab bar behaves as a flex container
           justifyContent: 'center',
         },
       }}
     >
+
       <Tabs.Screen
         name="home"
         options={{
@@ -102,6 +103,25 @@ const TabsLayout = () => {
               focused={focused}
             />
           ),
+        }}
+      />
+
+      {/* Future Trainer Tab */}
+      <Tabs.Screen
+        name="trainer"
+        options={{
+          title: "Trainer (Coming Soon)",
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              name="barbell" // Icon representing trainer/fitness
+              color={color}
+              focused={focused}
+            />
+          ),
+          tabBarStyle: {
+            display: 'none', // Hide this tab for now
+          },
         }}
       />
     </Tabs>

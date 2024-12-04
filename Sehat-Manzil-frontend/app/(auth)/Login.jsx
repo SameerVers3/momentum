@@ -27,6 +27,8 @@ const Login = () => {
         { withCredentials: true } // Ensures cookies are sent
       );
 
+      console.log(response);
+
       setLoading(false);
       // Handle successful login
       await AsyncStorage.setItem('userToken', response.data.token);
@@ -41,6 +43,7 @@ const Login = () => {
       router.replace('/(tabs)/profile');
       console.log(response.data); // Handle or store response data (e.g., user info or token)
     } catch (error) {
+      console.log("lag gaye");
       setLoading(false);
       // Handle errors
       const errorMessage = error.response?.data?.message || "An error occurred. Please try again.";

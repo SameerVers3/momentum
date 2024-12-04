@@ -5,7 +5,221 @@ CREATE TABLE users (
     name VARCHAR(255),
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(255),
+    role VARCHAR(255) DEFAULT 'user',
     status user_status NOT NULL DEFAULT 'not verified',
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE user_profiles (
+    user_id INTEGER PRIMARY KEY REFERENCES users(userid) ON DELETE CASCADE,
+    image_url TEXT,
+    gender VARCHAR(10) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    current_weight NUMERIC(5,2) NOT NULL,
+    current_height NUMERIC(5,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    goal VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE weight_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    weight NUMERIC(5,2) NOT NULL,
+    measured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE height_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    height NUMERIC(5,2) NOT NULL,
+    measured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger to insert height and weight history
+CREATE OR REPLACE FUNCTION insert_history_on_update() 
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.current_height <> OLD.current_height THEN
+        INSERT INTO height_history (user_id, height, measured_at)
+        VALUES (NEW.user_id, NEW.current_height, CURRENT_TIMESTAMP);
+    END IF;
+
+    IF NEW.current_weight <> OLD.current_weight THEN
+        INSERT INTO weight_history (user_id, weight, measured_at)
+        VALUES (NEW.user_id, NEW.current_weight, CURRENT_TIMESTAMP);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_user_profiles_history
+AFTER UPDATE ON user_profiles
+FOR EACH ROW
+EXECUTE FUNCTION insert_history_on_update();
+
+-- Trigger to update `updated_at` timestamp
+CREATE OR REPLACE FUNCTION update_user_profile_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at
+BEFORE UPDATE ON user_profiles
+FOR EACH ROW
+EXECUTE FUNCTION update_user_profile_timestamp();
+
+
+CREATE TABLE workouts (
+    workout_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100),
+    duration INT NOT NULL, -- in minutes
+    difficulty VARCHAR(50),
+    calories_burned NUMERIC(6,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE exercises (
+    exercise_id SERIAL PRIMARY KEY,
+    workout_id INTEGER REFERENCES workouts(workout_id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    muscle_group VARCHAR(100),
+    sets INT NOT NULL,
+    reps INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Automatically log when a workout is created
+CREATE OR REPLACE FUNCTION log_workout_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO activity_log (user_id, action, timestamp)
+    VALUES (NEW.workout_id, 'Workout Created', CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER workout_creation_log
+AFTER INSERT ON workouts
+FOR EACH ROW
+EXECUTE FUNCTION log_workout_creation();
+
+
+
+CREATE TABLE meals (
+    meal_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    calories NUMERIC(6,2) NOT NULL,
+    protein NUMERIC(6,2),
+    fat NUMERIC(6,2),
+    carbs NUMERIC(6,2),
+    meal_type VARCHAR(50) NOT NULL, -- e.g., breakfast, lunch, dinner, snack
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Automatically log when a meal is created
+CREATE OR REPLACE FUNCTION log_meal_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO activity_log (user_id, action, timestamp)
+    VALUES (NEW.user_id, 'Meal Logged', CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER meal_creation_log
+AFTER INSERT ON meals
+FOR EACH ROW
+EXECUTE FUNCTION log_meal_creation();
+
+
+CREATE TABLE progress_tracking (
+    progress_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    weight NUMERIC(5,2),
+    height NUMERIC(5,2),
+    body_fat_percentage NUMERIC(5,2),
+    BMI NUMERIC(5,2),
+    muscle_mass NUMERIC(5,2),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Automatically calculate BMI when progress is added
+CREATE OR REPLACE FUNCTION calculate_BMI()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.height > 0 THEN
+        NEW.BMI = NEW.weight / (NEW.height * NEW.height);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER calculate_BMI_on_insert
+BEFORE INSERT ON progress_tracking
+FOR EACH ROW
+EXECUTE FUNCTION calculate_BMI();
+
+
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    action VARCHAR(100), -- e.g., "goal updated", "workout completed"
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read BOOLEAN DEFAULT FALSE
+);
+
+-- Automatically mark notifications as read after 7 days
+CREATE OR REPLACE FUNCTION mark_notifications_read()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (NEW.created_at < (CURRENT_TIMESTAMP - INTERVAL '7 days')) THEN
+        NEW.read = TRUE;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER auto_mark_notifications_read
+BEFORE UPDATE ON notifications
+FOR EACH ROW
+EXECUTE FUNCTION mark_notifications_read();
+
+
+CREATE TABLE activity_log (
+    log_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    action VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE audit_logs (
+    log_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    action VARCHAR(255) NOT NULL,
+    details JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Automatically log changes to any user profile
+CREATE OR REPLACE FUNCTION log_user_profile_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_logs (user_id, action, details, created_at)
+    VALUES (NEW.user_id, 'Profile Updated', row_to_json(NEW), CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER log_profile_updates
+AFTER UPDATE ON user_profiles
+FOR EACH ROW
+EXECUTE FUNCTION log_user_profile_changes();

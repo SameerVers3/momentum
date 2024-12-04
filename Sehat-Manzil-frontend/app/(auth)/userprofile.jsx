@@ -12,135 +12,161 @@ import {
     Alert,
 } from 'react-native';
 import { ChevronDownIcon } from 'react-native-heroicons/solid';
-import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { images } from "../../constants"
-import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { images } from '../../constants';
+import { router } from 'expo-router';
+
 const Registration2 = () => {
-    const [gender, setGender] = useState(''); // To hold the selected gender
-    const [isGenderModalVisible, setGenderModalVisible] = useState(false); // Modal visibility
-    const [dateOfBirth, setDateOfBirth] = useState(null); // Initialize date as null
-    const [showDatePicker, setShowDatePicker] = useState(false); // Control date picker visibility
-    const [weight, setWeight] = useState(''); // State for weight
-    const [height, setHeight] = useState(''); // State for height
+    // Define theme locally
 
-    const genderOptions = ['Male', 'Female', 'Other']; // Gender options
+    const colors = {
+        background: '#2A2C38',
+        textPrimary: '#ffffff',
+        textSecondary: '#ffffff',
+        textPlaceholder: '#9CA3AF', //gray
+        inputBackground: '#161818', //
+        primaryGradientStart: '#6366F1', // bg-indigo-600
+        primaryGradientEnd: '#FF8961',
+        textOnPrimary: '#FFFFFF',
+        modalOverlay: 'rgba(0, 0, 0, 0.5)',
+        modalBackground: '#232533', // ligher shade of gray
+        divider: '#232533', // light gray
+    };
 
-    useEffect(() => {
-        const checkUserGoal = async () => {
-            try {
-                const user = await AsyncStorage.getItem('user');
-                const parsedUser = user ? JSON.parse(user) : null;
-    
-                if (parsedUser?.goal) {
-                    // If goal exists, navigate to home
-                    router.push('/home');
-                }
-            } catch (error) {
-                console.error('Error checking user goal:', error);
-            }
-        };
-    
-        checkUserGoal();
-    }, []);
+    const fonts = {
+        size: {
+            small: 14,
+            medium: 16,
+            large: 18,
+        },
+        weight: {
+            regular: '400',
+            bold: '700',
+        },
+    };
+
+    const [gender, setGender] = useState('');
+    const [isGenderModalVisible, setGenderModalVisible] = useState(false);
+    const [dateOfBirth, setDateOfBirth] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [weight, setWeight] = useState('');
+    const [height, setHeight] = useState('');
+
+    const genderOptions = ['Male', 'Female', 'Other'];
 
     const selectGender = (selectedGender) => {
-        setGender(selectedGender); // Set selected gender
-        setGenderModalVisible(false); // Close modal
+        setGender(selectedGender);
+        setGenderModalVisible(false);
     };
 
     const onDateChange = (event, selectedDate) => {
         if (selectedDate) {
-            setDateOfBirth(selectedDate); // Set selected date
+            setDateOfBirth(selectedDate);
         }
-        setShowDatePicker(Platform.OS === 'ios'); // Keep iOS picker open, close Android picker
+        setShowDatePicker(Platform.OS === 'ios');
     };
 
     const formatDate = (date) => {
         const day = date.getDate();
-        const month = date.getMonth() + 1; // Months are zero-indexed
+        const month = date.getMonth() + 1;
         const year = date.getFullYear();
         return `${day < 10 ? '0' + day : day}-${month < 10 ? '0' + month : month}-${year}`;
     };
 
     const handleNumericInput = (input, setter) => {
-        const numericValue = input.replace(/[^0-9]/g, ''); // Remove non-numeric characters
-        setter(numericValue); // Update the state with numeric value
+        const numericValue = input.replace(/[^0-9]/g, '');
+        setter(numericValue);
     };
 
-    const nextpage = async () => {
+    const nextPage = async () => {
         if (!gender || !dateOfBirth || !weight || !height) {
             Alert.alert('Error', 'Fill all required fields');
             return;
         }
-
+    
         try {
-            const user = await AsyncStorage.getItem('user');
-            const parsedUser = user ? JSON.parse(user) : {};
-
-            await AsyncStorage.setItem('user', JSON.stringify({
-                ...parsedUser,
+            const profileData = {
                 gender,
                 dateOfBirth: formatDate(dateOfBirth),
-                weight,
-                height,
-            }));
-
-            const data = await AsyncStorage.getItem('user');
-            const parsedData = data ? JSON.parse(data) : {};
-            router.push('/usergoals');
+                currentWeight: weight,
+                currentHeight: height,
+            };
+    
+            // Save locally
+            const user = await AsyncStorage.getItem('user');
+            const parsedUser = user ? JSON.parse(user) : {};
+            await AsyncStorage.setItem('user', JSON.stringify({ ...parsedUser, ...profileData }));
+    
+            // Navigate with profile data
+            router.push({
+                pathname: '/usergoals',
+                params: profileData,
+            });
         } catch (error) {
-            console.error('Error reading or updating AsyncStorage:', error);
+            Alert.alert('Error', 'Failed to update profile');
         }
     };
+    
+      
 
     return (
-        <SafeAreaView className="flex-1 bg-[#1C1C1C]">
-            <View className="flex-1 px-6 py-10 justify-between">
-                <View className="items-center">
-                    <Image
-                        source={images.registration2}
-                        className="w-48 h-48 mb-6"
-                    />
-                    <Text className="text-white text-2xl font-bold mb-2">Let's complete your profile</Text>
-                    <Text className="text-gray-400 text-base mb-8">It will help us to know more about you!</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ flex: 1, paddingHorizontal: 24, paddingVertical: 40, justifyContent: 'space-between' }}>
+                <View style={{ alignItems: 'center' }}>
+                    <Image source={images.registration2} style={{ width: 150, height: 150, marginBottom: 24 }} />
+                    <Text style={{ color: colors.textPrimary, fontSize: fonts.size.large, fontWeight: fonts.weight.bold }}>
+                        Let's complete your profile
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: fonts.size.medium, marginBottom: 32 }}>
+                        It will help us to know more about you!
+                    </Text>
                 </View>
 
-                <View className="space-y-4">
+                <View style={{ gap: 16 }}>
                     {/* Gender Input */}
                     <TouchableOpacity
                         onPress={() => setGenderModalVisible(true)}
-                        className="bg-[#2C2C2E] rounded-xl flex-row items-center justify-between px-4 py-3"
+                        style={{
+                            backgroundColor: colors.inputBackground,
+                            borderRadius: 12,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 16,
+                            paddingVertical: 12,
+                        }}
                     >
                         <TextInput
-                            className="text-white text-base flex-1"
+                            style={{ color: colors.textPrimary, fontSize: fonts.size.medium, flex: 1 }}
                             placeholder="Choose Gender"
-                            placeholderTextColor="#6B7280"
+                            placeholderTextColor={colors.textPlaceholder}
                             value={gender}
                             editable={false}
                         />
-                        <ChevronDownIcon color="#6B7280" size={20} />
+                        <ChevronDownIcon color={colors.textPlaceholder} size={20} />
                     </TouchableOpacity>
 
                     {/* Date of Birth Input */}
                     <TouchableOpacity
                         onPress={() => setShowDatePicker(true)}
-                        className="bg-[#2C2C2E] rounded-xl px-4 py-3"
+                        style={{
+                            backgroundColor: colors.inputBackground,
+                            borderRadius: 12,
+                            paddingHorizontal: 16,
+                            paddingVertical: 12,
+                        }}
                     >
                         <TextInput
-                            className="text-white text-base"
+                            style={{ color: colors.textPrimary, fontSize: fonts.size.medium }}
                             placeholder="Date of Birth"
-                            placeholderTextColor="#6B7280"
+                            placeholderTextColor={colors.textPlaceholder}
                             value={dateOfBirth ? formatDate(dateOfBirth) : ''}
                             editable={false}
                         />
                     </TouchableOpacity>
 
-                    {/* DateTimePicker modal */}
                     {showDatePicker && (
                         <DateTimePicker
                             value={dateOfBirth || new Date()}
@@ -152,41 +178,67 @@ const Registration2 = () => {
                     )}
 
                     {/* Weight and Height Inputs */}
-                    <View className="flex-row justify-between">
-                        <View className="bg-[#2C2C2E] rounded-xl px-4 py-3 w-[48%] flex-row items-center justify-between">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <View
+                            style={{
+                                backgroundColor: colors.inputBackground,
+                                borderRadius: 12,
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                width: '48%',
+                            }}
+                        >
                             <TextInput
-                                className="text-white text-base flex-1"
+                                style={{ color: colors.textPrimary, fontSize: fonts.size.medium, flex: 1 }}
                                 placeholder="Your Weight"
-                                placeholderTextColor="#6B7280"
+                                placeholderTextColor={colors.textPlaceholder}
                                 value={weight}
                                 onChangeText={(text) => handleNumericInput(text, setWeight)}
                                 keyboardType="numeric"
                             />
-                            <Text className="text-[#8E8E93] ml-2">KG</Text>
+                            <Text style={{ color: colors.textSecondary, marginLeft: 8 }}>KG</Text>
                         </View>
-                        <View className="bg-[#2C2C2E] rounded-xl px-4 py-3 w-[48%] flex-row items-center justify-between">
+                        <View
+                            style={{
+                                backgroundColor: colors.inputBackground,
+                                borderRadius: 12,
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                width: '48%',
+                            }}
+                        >
                             <TextInput
-                                className="text-white text-base flex-1"
+                                style={{ color: colors.textPrimary, fontSize: fonts.size.medium, flex: 1 }}
                                 placeholder="Your Height"
-                                placeholderTextColor="#6B7280"
+                                placeholderTextColor={colors.textPlaceholder}
                                 value={height}
                                 onChangeText={(text) => handleNumericInput(text, setHeight)}
                                 keyboardType="numeric"
                             />
-                            <Text className="text-[#8E8E93] ml-2">CM</Text>
+                            <Text style={{ color: colors.textSecondary, marginLeft: 8 }}>CM</Text>
                         </View>
                     </View>
                 </View>
 
-                <TouchableOpacity onPress={nextpage}>
-                    <LinearGradient
-                        colors={['#8A2BE2', '#5D3FD3']}
-                        start={[0, 0]}
-                        end={[1, 1]}
-                        className="rounded-xl py-4 items-center mt-8"
+                <TouchableOpacity onPress={nextPage}>
+                    <View
+                        style={{
+                            borderRadius: 12,
+                            paddingVertical: 16,
+                            alignItems: 'center',
+                            marginTop: 32,
+                            backgroundColor: colors.primaryGradientStart,
+                            borderRadius: 12,
+                        }}
                     >
-                        <Text className="text-white text-lg font-semibold">Next</Text>
-                    </LinearGradient>
+                        <Text style={{ color: colors.textOnPrimary, fontSize: fonts.size.large, fontWeight: fonts.weight.bold }}>
+                            Next
+                        </Text>
+                    </View>
                 </TouchableOpacity>
             </View>
 
@@ -198,18 +250,24 @@ const Registration2 = () => {
                 onRequestClose={() => setGenderModalVisible(false)}
             >
                 <TouchableWithoutFeedback onPress={() => setGenderModalVisible(false)}>
-                    <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-                        <View className="bg-[#2C2C2E] w-80 rounded-xl p-5">
-                            <Text className="text-white text-xl mb-4">Select Gender</Text>
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.modalOverlay }}>
+                        <View style={{ backgroundColor: colors.modalBackground, width: 320, borderRadius: 12, padding: 20 }}>
+                            <Text style={{ color: colors.textPrimary, fontSize: fonts.size.large, marginBottom: 16 }}>
+                                Select Gender
+                            </Text>
                             <FlatList
                                 data={genderOptions}
                                 keyExtractor={(item) => item}
                                 renderItem={({ item }) => (
                                     <TouchableOpacity
                                         onPress={() => selectGender(item)}
-                                        className="py-3 border-b border-gray-600"
+                                        style={{
+                                            paddingVertical: 12,
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: colors.divider,
+                                        }}
                                     >
-                                        <Text className="text-white text-lg">{item}</Text>
+                                        <Text style={{ color: colors.textPrimary, fontSize: fonts.size.medium }}>{item}</Text>
                                     </TouchableOpacity>
                                 )}
                             />

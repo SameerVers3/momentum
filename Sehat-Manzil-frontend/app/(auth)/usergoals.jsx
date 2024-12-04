@@ -3,8 +3,7 @@ import { View, Text, TouchableOpacity, Image, ScrollView, SafeAreaView, Dimensio
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import Async Storage
 import images from '../../constants/images';
 import { router } from 'expo-router';
-import axios from 'axios'; // Import Axios for API requests
-import { BASE_URL } from '../../constants/api';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
 
@@ -89,6 +88,8 @@ const GoalSelectionScreen = () => {
         goal: selectedGoal, // Add or update the goal property
       };
   
+      console.log(updatedUser);
+  
       // Save the updated user object back to AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
   
@@ -97,20 +98,27 @@ const GoalSelectionScreen = () => {
         email: updatedUser.email || '', // Ensure email is included
         date_of_birth: updatedUser.dateOfBirth || '',
         gender: updatedUser.gender || '',
-        weight: updatedUser.weight || 0,
-        height: updatedUser.height || 0,
+        weight: updatedUser.currentWeight || 0,
+        height: updatedUser.currentHeight || 0,
         goal: selectedGoal,
       };
   
+      // Retrieve the auth token from AsyncStorage
+      const authToken = await AsyncStorage.getItem('userToken');
+  
       // Call the API
-      const response = await axios.post(`${BASE_URL}/adduserprofile`, profileData);
+      const response = await axios.post(`${process.env.EXPO_PUBLIC_BACKEND_URL}/user/profile`, profileData, {
+        headers: {
+          Authorization: `Bearer ${authToken}`, // Pass the auth token in the request headers
+        },
+      });
   
       if (response.data.success) {
         console.log('User profile saved successfully:', response.data);
         Alert.alert('Success', 'Your profile has been updated.');
   
         // Navigate to the next screen
-        router.replace('/welcome');
+        router.replace('/profile');
       } else {
         Alert.alert('Error', response.data.message || 'Failed to save profile.');
       }
@@ -119,6 +127,7 @@ const GoalSelectionScreen = () => {
       Alert.alert('Error', 'An error occurred while saving your profile.');
     }
   };
+  
   
 
   const renderGoalCard = (goal, index) => (

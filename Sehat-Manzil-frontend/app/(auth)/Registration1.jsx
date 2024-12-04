@@ -134,6 +134,8 @@ const RegistrationScreen1 = () => {
           role: 'user'  // Default role as specified in your backend
         };
 
+        console.log("Registration data:", registrationData);
+
         // Make API call
         const response = await axios.post(`${backendUrl}/auth/register`, registrationData);
 

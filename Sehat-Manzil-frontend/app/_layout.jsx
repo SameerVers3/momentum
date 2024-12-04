@@ -64,6 +64,9 @@ const RootLayout = () => {
           if (user.status === 'not verified') {
             console.log("User is not verified");
             setIsVerified(false);
+          } else {
+            console.log("User is verified");
+            setIsVerified(true);
           }
           setIsLoggedIn(true);
         } else {

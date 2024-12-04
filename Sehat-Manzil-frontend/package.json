@@ -10,7 +10,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-navigation/native": "^7.0.0",
     "aura": "file:",
@@ -25,10 +25,14 @@
     "nativewind": "^2.0.11",
     "react": "18.3.1",
     "react-native": "0.76.3",
+    "react-native-animatable": "^1.4.0",
+    "react-native-chart-kit": "^6.12.0",
     "react-native-dotenv": "^3.3.1",
     "react-native-heroicons": "^4.0.0",
+    "react-native-linear-gradient": "^2.8.3",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.1.0",
+    "react-native-svg": "^15.10.0",
     "sehat-manzil": "file:"
   },
   "devDependencies": {

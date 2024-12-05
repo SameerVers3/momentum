@@ -1,10 +1,7 @@
 import express from 'express';
-import session from 'express-session';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
-// import courseRoutes from './routes/courseRoutes.js';
-// import gradeRoutes from './routes/gradeRoutes.js';
 import cookieParser from 'cookie-parser';
 import errorHandler from './middleware/errorHandler.js';
 

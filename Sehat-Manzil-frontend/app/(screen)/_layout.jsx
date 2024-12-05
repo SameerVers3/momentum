@@ -6,7 +6,9 @@ const Screens = () => {
   return (
     <Stack>
         <Stack.Screen name='privacy' options={{headerShown:false}}/>
-        <Stack.Screen name='support' options={{headerShown:false}}/>
+        <Stack.Screen name='about' options={{headerShown:false}}/>
+        <Stack.Screen name='profile' options={{headerShown:false}}/>
+        <Stack.Screen name='progress' options={{headerShown:false}}/>
     </Stack>
   )
 }

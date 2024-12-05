@@ -28,6 +28,10 @@ export const updateUserProfile = async (req, res) => {
 
   console.log(`Updating profile for userId: ${userId}`);
   console.log('Request body:', req.body);
+  console.log("--------------");
+  console.log(req.body.date_of_birth);
+  
+  console.log("--------------");
 
   try {
     // Validate incoming data

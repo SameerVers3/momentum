@@ -11,7 +11,7 @@ const router = express.Router();
 // Route to update user profile
 router.post('/profile', isAuthenticated, updateUserProfile);
 
-// Route to fetch user profile
+// Route to fetch combined user and profile data
 router.get('/profile', isAuthenticated, getUserData);
 
 export default router;

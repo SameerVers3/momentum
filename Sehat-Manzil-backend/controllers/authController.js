@@ -99,7 +99,14 @@ export const login = async (req, res) => {
       res.json({ 
         message: 'Login successful', 
         token,
-        success: true
+        success: true,
+        user: {
+          userId: users[0].userid,
+          role: users[0].role,
+          username: users[0].username,
+          email: users[0].email,  
+          status: users[0].status
+        }
       }); // Send token in response
     } finally {
       client.release();

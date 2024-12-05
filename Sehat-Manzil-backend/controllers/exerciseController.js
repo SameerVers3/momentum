@@ -177,18 +177,26 @@ export const deleteExercise = async (req, res) => {
   }
 };
 
-// Get all exercises for a specific workout or all exercises
+// Get all exercises for a specific workout or all exercises with optional search query
 export const getAllExercises = async (req, res) => {
-  const { workout_id } = req.query;
+  const { workout_id, search } = req.query; // search is the new query parameter
 
   try {
     const client = await pool.connect();
     try {
-      const query = workout_id
-        ? `SELECT * FROM exercises WHERE workout_id = $1;`
-        : `SELECT * FROM exercises;`;
+      // Create base query
+      let query = `SELECT * FROM exercises`;
 
-      const { rows } = await client.query(query, workout_id ? [workout_id] : []);
+      // Add search condition if provided
+      if (search) {
+        query += ` WHERE name ILIKE $1 OR muscle_group ILIKE $1`; // ILIKE for case-insensitive search
+      } else if (workout_id) {
+        query += ` WHERE workout_id = $1`;
+      }
+
+      const params = search ? [`%${search}%`] : workout_id ? [workout_id] : [];
+
+      const { rows } = await client.query(query, params);
 
       res.status(200).json({
         success: true,

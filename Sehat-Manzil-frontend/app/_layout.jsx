@@ -57,10 +57,13 @@ const RootLayout = () => {
       if (userToken) {
         // Verify the session
         const data = await verifySession(userToken);
+        console.log("--------------------")
         console.log(data);
         if (data.success === true) {
           console.log("User is logged in");
           const user = data.user;
+          console.log("user is " + user.status);
+          console.log("user is " + user.status === 'not verified');
           if (user.status === 'not verified') {
             console.log("User is not verified");
             setIsVerified(false);

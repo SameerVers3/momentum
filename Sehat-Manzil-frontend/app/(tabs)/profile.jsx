@@ -30,15 +30,27 @@ const ProfileScreen = ({ navigation }) => {
     fetchUserProfile();
   }, []);
 
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("userToken");
+      router.replace("/(auth)/Login");
+    } catch (error) {
+      Alert.alert("Error", "Failed to log out");
+    }
+  };
+
   const fetchUserProfile = async () => {
     try {
       const authToken = await AsyncStorage.getItem("userToken");
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/user/data`,
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/user/profile`,
         {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
+      console.log(response.data);
+      console.log(response.data);
 
       if (response.data.success) {
         setProfile(response.data.data);
@@ -104,7 +116,7 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <View style={{ flex: 1, backgroundColor: "#0F0F14" }}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView>
+      <SafeAreaView className="mb-16">
         <ScrollView>
           {/* Profile Header */}
           <LinearGradient
@@ -150,60 +162,33 @@ const ProfileScreen = ({ navigation }) => {
             <ProfileMenuItem
               icon="person"
               title="Personal Information"
-              onPress={() => navigation.navigate("EditProfile")}
+              onPress={() => router.replace("/(screen)/profile")}
             />
-            <ProfileMenuItem icon="stats-chart" title="Fitness Progress" onPress={() => {}} />
-            <ProfileMenuItem icon="medal" title="Achievements" onPress={() => {}} />
+            <ProfileMenuItem icon="stats-chart" title="Fitness Progress" onPress={() => router.replace("/(screen)/progress")} />
           </View>
 
           <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
             <Text style={{ color: "#9CA3AF", marginBottom: 8 }}>Settings</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                backgroundColor: "#1F1F28",
-                borderRadius: 15,
-                padding: 16,
-                marginBottom: 10,
-                shadowColor: "#000",
-                shadowOpacity: 0.2,
-                shadowOffset: { width: 0, height: 4 }
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="notifications" size={24} color="#4F46E5" />
-                <Text style={{ color: "#fff", marginLeft: 16 }}>Notifications</Text>
-              </View>
-              <Switch
-                trackColor={{ false: "#767577", true: "#4F46E5" }}
-                thumbColor={notificationsEnabled ? "#fff" : "#f4f3f4"}
-                ios_backgroundColor="#3e3e3e"
-                onValueChange={() => setNotificationsEnabled(!notificationsEnabled)}
-                value={notificationsEnabled}
-              />
-            </View>
             <ProfileMenuItem icon="lock-closed" title="Privacy" onPress={() =>  router.replace("/(screen)/privacy")} />
-            <ProfileMenuItem icon="help-circle" title="Support" onPress={() =>  router.replace("/(screen)/privacy")} />
+            <ProfileMenuItem icon="help-circle" title="About the Devs " onPress={() =>  router.replace("/(screen)/about")} />  
           </View>
 
-          {/* Logout Button */}
-          <TouchableOpacity
-            onPress={() => {
-              /* Logout logic */
-            }}
-            style={{
-              backgroundColor: "#EF4444",
-              padding: 16,
-              borderRadius: 15,
-              alignItems: "center",
-              marginHorizontal: 16,
-              marginTop: 24
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Logout</Text>
-          </TouchableOpacity>
+          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{
+                backgroundColor: "#4F46E5",
+                borderRadius: 15,
+                padding: 16,
+                margin: 16,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+                Logout
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>

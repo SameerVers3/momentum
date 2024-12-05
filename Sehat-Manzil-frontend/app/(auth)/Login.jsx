@@ -36,12 +36,20 @@ const Login = () => {
       Alert.alert("Success", "Login successful!");
 
       const data = response.data;
-
-      console.log("hhhhhhhhhhhhhhhhhhhhhhhhhhh");
+      console.log("-------------------------------------------");
       console.log(data);
+      if (data.success === true) {
+        const user = data.user;
 
-      router.replace('/(tabs)/profile');
-      console.log(response.data); // Handle or store response data (e.g., user info or token)
+        if (user.status === 'not verified') {
+          router.replace('/(auth)/userprofile');
+        } else {
+          router.replace('/(tabs)/profile');
+        }
+      } else {
+        await AsyncStorage.removeItem('userToken');
+      }
+
     } catch (error) {
       console.log("lag gaye");
       setLoading(false);

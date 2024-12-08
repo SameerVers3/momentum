@@ -4,7 +4,7 @@ import {
   markNotificationAsRead,
   createNotification,
   deleteNotification,
-} from '../controllers/notificationController.js';
+} from '../controllers/notification.js';
 import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();

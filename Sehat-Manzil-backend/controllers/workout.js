@@ -5,12 +5,23 @@ import pkg from 'pg';
 const { Pool } = pkg;
 const pool = await connectDB();
 
+// CREATE TABLE workouts (
+//   workout_id SERIAL PRIMARY KEY,
+//   name VARCHAR(255) NOT NULL,
+//   category VARCHAR(100),
+//   duration INT NOT NULL, -- in minutes
+//   difficulty VARCHAR(50),
+//   calories_burned NUMERIC(6,2) NOT NULL,
+//   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+// );
+
 // Validation schema for workout
 const workoutSchema = z.object({
-  name: z.string().min(3, 'Workout name must be at least 3 characters long'),
-  type: z.enum(['Strength', 'Cardio', 'Flexibility', 'Balance']),
+  name: z.string().min(1, 'Name is required'),
+  category: z.string().optional(),
   duration: z.number().positive('Duration must be a positive number'), // in minutes
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  difficulty: z.string().optional(),
+  calories_burned: z.number().positive('Calories burned must be a positive number'),
 });
 
 // Utility function to parse and validate data
@@ -18,20 +29,25 @@ const validateWorkout = (data) => workoutSchema.parse(data);
 
 // Create a new workout
 export const createWorkout = async (req, res) => {
-  const { userId } = req.user;
-
   try {
     const parsedData = validateWorkout(req.body);
 
     const client = await pool.connect();
+
     try {
       const { rows } = await client.query(
         `
-        INSERT INTO workouts (user_id, name, type, duration, date)
+        INSERT INTO workouts (name, category, duration, difficulty, calories_burned)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING *;
         `,
-        [userId, parsedData.name, parsedData.type, parsedData.duration, parsedData.date]
+        [
+          parsedData.name,
+          parsedData.category,
+          parsedData.duration,
+          parsedData.difficulty,
+          parsedData.calories_burned
+        ]
       );
 
       res.status(201).json({ 
@@ -52,16 +68,12 @@ export const createWorkout = async (req, res) => {
   }
 };
 
-// Get all workouts for a user
 export const getWorkouts = async (req, res) => {
-  const { userId } = req.user;
-
   try {
     const client = await pool.connect();
     try {
       const { rows } = await client.query(
-        `SELECT * FROM workouts WHERE user_id = $1 ORDER BY date DESC;`,
-        [userId]
+        `SELECT * FROM workouts ORDER BY created_at DESC;`
       );
 
       res.status(200).json({ 
@@ -82,9 +94,7 @@ export const getWorkouts = async (req, res) => {
   }
 };
 
-// Update a workout
 export const updateWorkout = async (req, res) => {
-  const { userId } = req.user;
   const { workoutId } = req.params;
 
   try {
@@ -95,11 +105,18 @@ export const updateWorkout = async (req, res) => {
       const { rows } = await client.query(
         `
         UPDATE workouts
-        SET name = $1, type = $2, duration = $3, date = $4
-        WHERE user_id = $5 AND id = $6
+        SET name = $1, category = $2, duration = $3, difficulty = $4, calories_burned = $5
+        WHERE workout_id = $6
         RETURNING *;
         `,
-        [parsedData.name, parsedData.type, parsedData.duration, parsedData.date, userId, workoutId]
+        [
+          parsedData.name,
+          parsedData.category,
+          parsedData.duration,
+          parsedData.difficulty,
+          parsedData.calories_burned,
+          workoutId
+        ]
       );
 
       if (rows.length === 0) {
@@ -129,7 +146,6 @@ export const updateWorkout = async (req, res) => {
 
 // Delete a workout
 export const deleteWorkout = async (req, res) => {
-  const { userId } = req.user;
   const { workoutId } = req.params;
 
   try {
@@ -138,9 +154,9 @@ export const deleteWorkout = async (req, res) => {
       const { rowCount } = await client.query(
         `
         DELETE FROM workouts
-        WHERE user_id = $1 AND id = $2;
+        WHERE workout_id = $1;
         `,
-        [userId, workoutId]
+        [workoutId]
       );
 
       if (rowCount === 0) {
@@ -162,6 +178,38 @@ export const deleteWorkout = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to delete workout', 
+      error: error.message 
+    });
+  }
+};
+
+// get a workout by id
+export const getWorkoutById = async (req, res) => {
+  const { workoutId } = req.params;
+  console.log(workoutId);
+
+  try {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query(
+        `SELECT * FROM workouts WHERE workout_id = $1;`,
+        [workoutId]
+      );
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Workout fetched successfully', 
+        workout: rows[0] 
+      });
+
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error fetching workout:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch workout', 
       error: error.message 
     });
   }

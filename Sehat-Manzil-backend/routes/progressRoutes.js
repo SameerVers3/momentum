@@ -5,7 +5,7 @@ import {
     updateProgress,
     deleteProgress,
     getUserMetricsHistory
-} from '../controllers/progressController.js';
+} from '../controllers/progress.js';
 import { isAuthenticated } from "../middleware/auth.js";
 
 const router = express.Router();

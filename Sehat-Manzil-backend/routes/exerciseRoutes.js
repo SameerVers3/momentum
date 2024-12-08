@@ -5,24 +5,30 @@ import {
   updateExercise,
   deleteExercise,
   getAllExercises,
-} from '../controllers/exerciseController.js';
-import { isAuthenticated } from '../middleware/auth.js';
+} from '../controllers/exercise.js';
+import { 
+  isAuthenticated,
+  isAdminAuthenticated
+ } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Create a new exercise
-router.post('/', isAuthenticated, createExercise);
+// get can be done by all users but post, put, delete can only be done by admin
 
-// Get a single exercise by ID
-router.get('/:exerciseId', isAuthenticated, getExercise);
+// Create a new exercise
+router.post('/', isAuthenticated,isAdminAuthenticated, createExercise);
 
 // Update an exercise by ID
-router.put('/:exerciseId', isAuthenticated, updateExercise);
+router.put('/:exerciseId', isAdminAuthenticated, updateExercise);
 
 // Delete an exercise by ID
-router.delete('/:exerciseId', isAuthenticated, deleteExercise);
+router.delete('/:exerciseId', isAdminAuthenticated, deleteExercise);
+
 
 // Get all exercises for a specific workout or general list
 router.get('/', isAuthenticated, getAllExercises);
+
+// Get a single exercise by ID
+router.get('/:exerciseId', isAuthenticated, getExercise);
 
 export default router;

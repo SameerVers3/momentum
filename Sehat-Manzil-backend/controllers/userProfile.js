@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import connectDB from '../config/db.js';
 import pkg from 'pg';
-import { approveUser } from './authController.js';
+import { approveUser } from './auth.js';
 
 const { Pool } = pkg;
 const pool = await connectDB();

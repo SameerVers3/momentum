@@ -4,7 +4,7 @@ import {
   getMeals,
   updateMeal,
   deleteMeal
-} from '../controllers/mealController.js';
+} from '../controllers/meal.js';
 import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();

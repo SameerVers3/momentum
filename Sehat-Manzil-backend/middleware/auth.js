@@ -9,17 +9,14 @@ export const isAuthenticated = async (req, res, next) => {
   try {
     console.log('Checking authentication...');
 
-    // Get the Authorization header from the request
     const authHeader = req.headers['authorization'];
     console.log('Authorization header:', authHeader);
 
-    // Check if the header exists
     if (!authHeader) {
       console.log('Authorization header missing.');
       return res.status(401).json({ message: 'Unauthorized. Please log in.' });
     }
 
-    // Extract token from the header
     const token = authHeader.split(' ')[1];
     console.log('Token:', token);
 
@@ -28,18 +25,15 @@ export const isAuthenticated = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized. Token missing.' });
     }
 
-    // Verify the token
     jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
       if (err) {
         console.log('Invalid token:', err);
         return res.status(403).json({ message: 'Forbidden. Invalid token.' });
       }
 
-      // Token is valid, extract user data from the decoded token
       const { userid, role } = decoded;
       console.log('Decoded token:', decoded);
 
-      // Check if the user exists in the database
       const client = await pool.connect();
 
       console.log('Checking user in the database...');
@@ -82,3 +76,83 @@ export const isAuthenticated = async (req, res, next) => {
   }
 };
 
+
+export const isAdminAuthenticated = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+      return res.status(401).json({ 
+        message: 'Unauthorized. Please log in.',
+        success: false
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ 
+        message: 'Unauthorized. Token missing.',
+        success: false
+      });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ 
+          message: 'Forbidden. Invalid token.',
+          success: false
+        });
+      }
+
+      const { userId, role } = decoded;
+      
+      if (role !== 'admin') {
+        return res.status(403).json({ 
+          message: 'Forbidden. Admin access required.',
+          success: false
+        });
+      }
+
+      const client = await pool.connect();
+
+      try {
+        const { rows } = await client.query(
+          'SELECT * status FROM users WHERE userid = $1',
+          [userId]
+        );
+
+        if (rows.length === 0) {
+          return res.status(401).json({ 
+            message: 'Unauthorized. User not found.',
+            success: false
+          });
+        }
+
+        if (rows[0].role !== 'admin') {
+          return res.status(403).json({ 
+            message: 'Forbidden. Admin access required.',
+            success: false
+          });
+        }
+
+        next();
+
+      } catch (error) {
+        console.error('Error checking user in the database:', error);
+        return res.status(500).json({ 
+          message: 'Server error',
+          success: false
+        });
+      } finally {
+        client.release();
+      }      
+    });
+  }
+  catch (error) {
+    console.error('Error checking authentication:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      success: false
+    });
+  }
+}

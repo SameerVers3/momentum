@@ -223,3 +223,46 @@ CREATE TRIGGER log_profile_updates
 AFTER UPDATE ON user_profiles
 FOR EACH ROW
 EXECUTE FUNCTION log_user_profile_changes();
+
+CREATE TABLE workout_plans (
+    plan_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE workout_plan_workouts (
+    plan_workout_id SERIAL PRIMARY KEY,
+    plan_id INTEGER REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
+    workout_id INTEGER REFERENCES workouts(workout_id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_workout_plans (
+    user_plan_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    plan_id INTEGER REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_workout_logs (
+    log_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
+    workout_id INTEGER REFERENCES workouts(workout_id) ON DELETE CASCADE,
+    performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    duration INT, -- Duration in minutes
+    calories_burned NUMERIC(6,2),
+    notes TEXT
+);
+
+CREATE TABLE user_exercise_logs (
+    exercise_log_id SERIAL PRIMARY KEY,
+    user_workout_log_id INTEGER REFERENCES user_workout_logs(log_id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(exercise_id) ON DELETE CASCADE,
+    sets_completed INT NOT NULL,
+    reps_performed INT NOT NULL,
+    weight_used NUMERIC(6,2), -- Optional, e.g., in kg or lbs
+    notes TEXT
+);

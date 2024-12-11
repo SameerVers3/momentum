@@ -61,6 +61,8 @@ export const createExercise = async (req, res) => {
 export const getExercisesByWorkout = async (req, res) => {
   const { workoutId } = req.params;
 
+  console.log('workoutId:', workoutId);
+
   try {
     const client = await pool.connect();
     try {
@@ -215,6 +217,28 @@ export const getExerciseById = async (req, res) => {
 };
 
 export const getAllExercises = async (req, res) => {
-  
-}
+  // complete this function
+  try {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query(
+        `SELECT * FROM exercises ORDER BY created_at;`
+      );
 
+      res.status(200).json({
+        success: true,
+        message: 'Exercises fetched successfully',
+        exercises: rows
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error fetching exercises:', error);
+    res.status(500).json({
+      success: false, 
+      message: 'Failed to fetch exercises',
+      error: error.message
+    });
+  }
+}

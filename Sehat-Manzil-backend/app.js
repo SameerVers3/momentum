@@ -29,7 +29,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/workout', workoutRoutes);
 app.use('/api/exercise', exerciseRoutes);
 app.use('/api/notification', notificationRoutes);
-app.use('/api/meal', mealRoutes);
+app.use('/api/meals', mealRoutes);
 app.use('/api/progress', progressRoutes);
 
 app.use('/', (req, res) => {

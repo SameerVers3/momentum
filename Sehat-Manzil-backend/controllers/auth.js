@@ -233,3 +233,58 @@ export const approveUser = async (userId) => {
     console.error(error);
   }
 };
+
+const adminLoginSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  password: z.string().nonempty('Password is required'),
+});
+
+export const adminLogin = async (req, res) => {
+
+  const client = await pool.connect();
+  
+  console.log(req.body);
+
+  const parsedData = adminLoginSchema.safeParse(req.body);
+
+  console.log(parsedData);
+
+  if (!parsedData.success) {
+    return res.status(400).json({
+      message: 'Invalid credentials',
+      success: false
+    });
+  }
+
+  const {
+    email,
+    password
+  } = parsedData.data;
+
+  // hardcode admin credentials for now
+
+  // search in db for admin credentials and role=admin
+
+  const { rows } = await client.query(
+    'SELECT * FROM users WHERE email = $1 AND password = $2 AND role = $3',
+      [email, password, 'admin']
+    );
+
+    console.log(rows); 
+  
+  if (rows.length === 0) {
+    return res.status(401).json({
+      message: 'Invalid credentials',
+      success: false
+    });
+  }
+
+  const token = jwt.sign({ userid: rows[0].userid, role: rows[0].role }, process.env.JWT_SECRET_KEY, { expiresIn: '1d' });
+
+  res.status(200).json({
+    message: 'Admin login successful',
+    success: true,
+    user: rows[0],
+    token
+  });
+}

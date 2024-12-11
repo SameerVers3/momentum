@@ -11,15 +11,21 @@ import {
   ScrollView,
   Modal,
   FlatList,
-  Dimensions
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { LinearGradient } from "expo-linear-gradient";
+import { styled } from "nativewind";
 
-const { width } = Dimensions.get("window");
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledLinearGradient = styled(LinearGradient);
+
+
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
@@ -166,173 +172,253 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0F0F14", alignItems: "center", justifyContent: "center" }}>
+      <StyledView className="flex-1 bg-[#0F0F14] items-center justify-center">
         <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
+      </StyledView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#1F1F28" }}>
+    <StyledView className="flex-1 bg-[#0F0F14]">
       <StatusBar barStyle="light-content" />
-      <ScrollView style={{ padding: 20 }}>
-        <TouchableOpacity
-          onPress={() => router.replace("/(tabs)/profile")}
-          style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}
-          className="mt-12"
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-          <Text style={{ marginLeft: 10, fontSize: 18, color: "#fff", fontWeight: "600" }}>Back</Text>
-        </TouchableOpacity>
+      <SafeAreaView className="flex-1">
+        <ScrollView className="flex-1">
+          {/* Hero Section */}
+          <StyledView className="px-6 pt-12 pb-20 relative">
+            {/* Back Button and Title */}
+            <StyledView className="flex-row items-center justify-between mb-8">
+              <StyledTouchableOpacity
+                onPress={() => router.replace("/(tabs)/profile")}
+                className="bg-[#1F1F28] p-2 rounded-full"
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </StyledTouchableOpacity>
+              <StyledView className="bg-[#1F1F28] p-3 rounded-full">
+                <Ionicons name="person" size={24} color="#4F46E5" />
+              </StyledView>
+            </StyledView>
 
-        <View style={{ alignItems: "center", marginBottom: 30 }}>
-          <Ionicons name="person" size={100} color="#4F46E5" />
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 24, marginTop: 10 }}>Edit Profile</Text>
-        </View>
+            <StyledView className="mb-6">
+              <StyledText className="text-white/70 text-lg mb-1">
+                Edit Profile
+              </StyledText>
+              <StyledText className="text-white font-bold text-3xl">
+                {formData.name || "Your Name"}
+              </StyledText>
+            </StyledView>
 
-        {/* Form Fields */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-          {/* Name Input */}
-          <View style={{ width: "48%", marginBottom: 20 }}>
-            <Text style={{ color: "#fff", fontSize: 16 }}>Full Name</Text>
-            <TextInput
-              style={inputStyle}
-              placeholder="Enter your name"
-              placeholderTextColor="#bbb"
-              value={formData.name}
-              onChangeText={(text) => handleInputChange("name", text)}
-            />
-          </View>
+            {/* Quick Stats */}
+            <StyledView className="flex-row justify-between">
+              <StyledView className="bg-[#1F1F28] px-4 py-3 rounded-2xl flex-1 mr-3">
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-lg mr-3">
+                    <Ionicons name="body-outline" size={18} color="#4F46E5" />
+                  </StyledView>
+                  <StyledView>
+                    <StyledText className="text-white/70 text-sm">Weight</StyledText>
+                    <StyledText className="text-white font-medium">
+                      {formData.current_weight || "0"} kg
+                    </StyledText>
+                  </StyledView>
+                </StyledView>
+              </StyledView>
+              <StyledView className="bg-[#1F1F28] px-4 py-3 rounded-2xl flex-1">
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-lg mr-3">
+                    <Ionicons name="resize-outline" size={18} color="#4F46E5" />
+                  </StyledView>
+                  <StyledView>
+                    <StyledText className="text-white/70 text-sm">Height</StyledText>
+                    <StyledText className="text-white font-medium">
+                      {formData.current_height || "0"} cm
+                    </StyledText>
+                  </StyledView>
+                </StyledView>
+              </StyledView>
+            </StyledView>
+          </StyledView>
 
-          {/* Email Input */}
-          <View style={{ width: "48%", marginBottom: 20 }}>
-            <Text style={{ color: "#fff", fontSize: 16 }}>Email</Text>
-            <TextInput
-              style={inputStyle}
-              placeholder="Enter your email"
-              placeholderTextColor="#bbb"
-              value={formData.email}
-              onChangeText={(text) => handleInputChange("email", text)}
-            />
-          </View>
-        </View>
+          {/* Main Content */}
+          <StyledView className="px-4 -mt-8">
+            {/* Form Card */}
+            <StyledView className="bg-[#1F1F28] p-6 rounded-2xl shadow-lg border border-gray-800/50">
+              {/* Name & Email Section */}
+              <StyledView className="mb-6">
+                <StyledText className="text-white/70 text-sm mb-2">Personal Info</StyledText>
+                <StyledView className="space-y-4">
+                  <StyledView>
+                    <StyledText className="text-[#9CA3AF] text-sm mb-2">Full Name</StyledText>
+                    <TextInput
+                      className="bg-[#2C2C3E] text-white p-4 rounded-xl"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.name}
+                      onChangeText={(text) => handleInputChange("name", text)}
+                    />
+                  </StyledView>
+                  <StyledView>
+                    <StyledText className="text-[#9CA3AF] text-sm mb-2">Email</StyledText>
+                    <TextInput
+                      className="bg-[#2C2C3E] text-white p-4 rounded-xl"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.email}
+                      onChangeText={(text) => handleInputChange("email", text)}
+                    />
+                  </StyledView>
+                </StyledView>
+              </StyledView>
 
-        {/* Gender Selection */}
-        <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>Gender</Text>
-        <TouchableOpacity onPress={() => setGenderModalVisible(true)} style={selectButtonStyle}>
-          <Text style={{ color: "#fff", fontSize: 16 }}>{formData.gender || "Select Gender"}</Text>
-        </TouchableOpacity>
+              {/* Personal Details Section */}
+              <StyledView className="mb-6">
+                <StyledText className="text-white/70 text-sm mb-2">Personal Details</StyledText>
+                <StyledView className="space-y-4">
+                  {/* Gender Selection */}
+                  <StyledTouchableOpacity 
+                    onPress={() => setGenderModalVisible(true)}
+                    className="bg-[#2C2C3E] p-4 rounded-xl flex-row justify-between items-center"
+                  >
+                    <StyledView>
+                      <StyledText className="text-[#9CA3AF] text-sm mb-1">Gender</StyledText>
+                      <StyledText className="text-white">{formData.gender || "Select Gender"}</StyledText>
+                    </StyledView>
+                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                  </StyledTouchableOpacity>
 
-        {/* Goal Selection */}
-        <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>Goal</Text>
-        <TouchableOpacity onPress={() => setGoalModalVisible(true)} style={selectButtonStyle}>
-          <Text style={{ color: "#fff", fontSize: 16 }}>{formData.goal || "Select Goal"}</Text>
-        </TouchableOpacity>
+                  {/* Date of Birth */}
+                  <StyledTouchableOpacity 
+                    onPress={() => setShowDatePicker(true)}
+                    className="bg-[#2C2C3E] p-4 rounded-xl flex-row justify-between items-center"
+                  >
+                    <StyledView>
+                      <StyledText className="text-[#9CA3AF] text-sm mb-1">Date of Birth</StyledText>
+                      <StyledText className="text-white">{formData.date_of_birth || "Select Date"}</StyledText>
+                    </StyledView>
+                    <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
+                  </StyledTouchableOpacity>
+                </StyledView>
+              </StyledView>
 
-        {/* Date of Birth */}
-        <Text style={{ color: "#fff", fontSize: 16, marginBottom: 8 }}>Date of Birth</Text>
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={selectButtonStyle}>
-          <Text style={{ color: "#fff", fontSize: 16 }}>{formData.date_of_birth || "Select Date"}</Text>
-        </TouchableOpacity>
+              {/* Measurements Section */}
+              <StyledView className="mb-6">
+                <StyledText className="text-white/70 text-sm mb-2">Body Measurements</StyledText>
+                <StyledView className="flex-row space-x-4">
+                  <StyledView className="flex-1">
+                    <StyledText className="text-[#9CA3AF] text-sm mb-2">Height (cm)</StyledText>
+                    <TextInput
+                      className="bg-[#2C2C3E] text-white p-4 rounded-xl"
+                      keyboardType="numeric"
+                      value={formData.current_height}
+                      onChangeText={(text) => handleInputChange("current_height", text)}
+                    />
+                  </StyledView>
+                  <StyledView className="flex-1">
+                    <StyledText className="text-[#9CA3AF] text-sm mb-2">Weight (kg)</StyledText>
+                    <TextInput
+                      className="bg-[#2C2C3E] text-white p-4 rounded-xl"
+                      keyboardType="numeric"
+                      value={formData.current_weight}
+                      onChangeText={(text) => handleInputChange("current_weight", text)}
+                    />
+                  </StyledView>
+                </StyledView>
+              </StyledView>
 
-        {/* Height and Weight */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          {/* Height */}
-          <View style={{ width: "48%", marginBottom: 20 }}>
-            <Text style={{ color: "#fff", fontSize: 16 }}>Current Height (cm)</Text>
-            <TextInput
-              style={inputStyle}
-              keyboardType="numeric"
-              value={formData.current_height}
-              onChangeText={(text) => handleInputChange("current_height", text)}
-            />
-          </View>
-
-          {/* Weight */}
-          <View style={{ width: "48%", marginBottom: 20 }}>
-            <Text style={{ color: "#fff", fontSize: 16 }}>Current Weight (kg)</Text>
-            <TextInput
-              style={inputStyle}
-              keyboardType="numeric"
-              value={formData.current_weight}
-              onChangeText={(text) => handleInputChange("current_weight", text)}
-            />
-          </View>
-        </View>
-
-        {/* Update Button */}
-        <TouchableOpacity
-          style={updateButtonStyle}
-          onPress={handleUpdateProfile}
-          disabled={updating}
-          className="mb-12"
-        >
-          <Text style={{ color: "#fff", fontSize: 18, fontWeight: "600" }}>
-            {updating ? "Updating..." : "Update Profile"}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Gender Modal */}
-      <Modal
-        visible={genderModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setGenderModalVisible(false)}
-      >
-        <TouchableOpacity style={modalOverlayStyle} onPress={() => setGenderModalVisible(false)}>
-          <View style={modalContentStyle}>
-            <FlatList
-              data={genderOptions}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => handleGenderSelect(item)}
-                  style={modalItemStyle}
+              {/* Goal Selection */}
+              <StyledView className="mb-6">
+                <StyledText className="text-white/70 text-sm mb-2">Fitness Goal</StyledText>
+                <StyledTouchableOpacity 
+                  onPress={() => setGoalModalVisible(true)}
+                  className="bg-[#2C2C3E] p-4 rounded-xl flex-row justify-between items-center"
                 >
-                  <Text style={{ color: "#fff", fontSize: 18 }}>{item}</Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+                  <StyledView>
+                    <StyledText className="text-[#9CA3AF] text-sm mb-1">Goal</StyledText>
+                    <StyledText className="text-white">{formData.goal || "Select Goal"}</StyledText>
+                  </StyledView>
+                  <Ionicons name="trophy-outline" size={20} color="#9CA3AF" />
+                </StyledTouchableOpacity>
+              </StyledView>
+            </StyledView>
 
-      {/* Goal Modal */}
-      <Modal
-        visible={goalModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setGoalModalVisible(false)}
-      >
-        <TouchableOpacity style={modalOverlayStyle} onPress={() => setGoalModalVisible(false)}>
-          <View style={modalContentStyle}>
-            <FlatList
-              data={goalOptions}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => handleGoalSelect(item)}
-                  style={modalItemStyle}
-                >
-                  <Text style={{ color: "#fff", fontSize: 18 }}>{item}</Text>
-                </TouchableOpacity>
+            {/* Update Button */}
+            <StyledTouchableOpacity
+              onPress={handleUpdateProfile}
+              disabled={updating}
+              className="bg-[#4F46E5] p-4 rounded-xl flex-row items-center justify-center mt-6 mb-8"
+            >
+              {updating ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+                  <StyledText className="text-white font-semibold ml-2">
+                    Save Changes
+                  </StyledText>
+                </>
               )}
-              keyExtractor={(item) => item}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
+            </StyledTouchableOpacity>
+          </StyledView>
+        </ScrollView>
 
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={new Date(formData.date_of_birth)}
-          mode="date"
-          onChange={handleDateChange}
-          display="spinner"
-        />
-      )}
-    </SafeAreaView>
+        {/* Gender Modal */}
+        <Modal
+          visible={genderModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setGenderModalVisible(false)}
+        >
+          <TouchableOpacity style={modalOverlayStyle} onPress={() => setGenderModalVisible(false)}>
+            <View style={modalContentStyle}>
+              <FlatList
+                data={genderOptions}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => handleGenderSelect(item)}
+                    style={modalItemStyle}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 18 }}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Goal Modal */}
+        <Modal
+          visible={goalModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setGoalModalVisible(false)}
+        >
+          <TouchableOpacity style={modalOverlayStyle} onPress={() => setGoalModalVisible(false)}>
+            <View style={modalContentStyle}>
+              <FlatList
+                data={goalOptions}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => handleGoalSelect(item)}
+                    style={modalItemStyle}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 18 }}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={new Date(formData.date_of_birth)}
+            mode="date"
+            onChange={handleDateChange}
+            display="spinner"
+          />
+        )}
+      </SafeAreaView>
+    </StyledView>
   );
 };
 

@@ -2,43 +2,48 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   ScrollView,
-  Switch,
   SafeAreaView,
   StatusBar,
-  Dimensions,
-  Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
-import * as Animatable from "react-native-animatable";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from 'expo-router';
+import { styled } from "nativewind";
 
-const { width } = Dimensions.get("window");
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledLinearGradient = styled(LinearGradient);
 
-const ProfileScreen = ({ navigation }) => {
+const getWorkoutGradient = (category) => {
+  switch (category.toLowerCase()) {
+    case 'cardio':
+      return ['#FF6B6B', '#845EC2'];
+    case 'strength':
+      return ['#4D8076', '#2C73D2'];
+    case 'yoga':
+      return ['#FF9671', '#845EC2'];
+    case 'hiit':
+      return ['#F9F871', '#FF9671'];
+    default:
+      return ['#4F46E5', '#302F4E'];
+  }
+};
+
+const ProfileScreen = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
   }, []);
-
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem("userToken");
-      router.replace("/(auth)/Login");
-    } catch (error) {
-      Alert.alert("Error", "Failed to log out");
-    }
-  };
 
   const fetchUserProfile = async () => {
     try {
@@ -49,7 +54,6 @@ const ProfileScreen = ({ navigation }) => {
           headers: { Authorization: `Bearer ${authToken}` }
         }
       );
-      console.log(response.data);
       console.log(response.data);
 
       if (response.data.success) {
@@ -62,136 +66,191 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
-  const ProfileStatCard = ({ label, value, icon }) => (
-    <Animatable.View
-      animation="fadeInUp"
-      duration={800}
-      style={{
-        backgroundColor: "#1F1F28",
-        borderRadius: 15,
-        padding: 16,
-        alignItems: "center",
-        marginHorizontal: 10,
-        width: width * 0.3,
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 4 }
-      }}
-    >
-      <Ionicons name={icon} size={28} color="#4F46E5" />
-      <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18, marginTop: 8 }}>{value}</Text>
-      <Text style={{ color: "#9CA3AF", fontSize: 12 }}>{label}</Text>
-    </Animatable.View>
-  );
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserProfile(); // Fetch profile data again
+    setRefreshing(false);
+  };
 
-  const ProfileMenuItem = ({ icon, title, onPress }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#1F1F28",
-        borderRadius: 15,
-        padding: 16,
-        marginBottom: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 4 }
-      }}
-    >
-      <Ionicons name={icon} size={24} color="#4F46E5" />
-      <Text style={{ color: "#fff", marginLeft: 16, flex: 1 }}>{title}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-    </TouchableOpacity>
-  );
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("userToken");
+      router.replace("/(auth)/Login");
+    } catch (error) {
+      Alert.alert("Error", "Failed to log out");
+    }
+  };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0F0F14", alignItems: "center", justifyContent: "center" }}>
+      <StyledView className="flex-1 bg-[#0F0F14] items-center justify-center">
         <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
+      </StyledView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0F0F14" }}>
+    <StyledView className="flex-1 bg-[#0F0F14]">
       <StatusBar barStyle="light-content" />
-      <SafeAreaView className="mb-16">
-        <ScrollView>
-          {/* Profile Header */}
-          <LinearGradient
-            colors={["#4F46E5", "#302F4E"]}
+      <SafeAreaView className="flex-1">
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />
+          }
+          className="flex-1"
+        >
+          {/* Hero Section */}
+          <StyledLinearGradient
+            colors={getWorkoutGradient('strength')}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{
-              alignItems: "center",
-              paddingVertical: 40,
-              borderBottomLeftRadius: 40,
-              borderBottomRightRadius: 40
-            }}
+            className="h-[300px] relative"
           >
-            <View style={{ alignItems: "center" }}>
-              <Image
-                source={{ uri: profile?.image_url || "https://via.placeholder.com/150" }}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
-                  borderWidth: 4,
-                  borderColor: "#fff",
-                  marginBottom: 16
-                }}
-              />
-              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
-                {profile?.name || "Anonymous User"}
-              </Text>
-              <Text style={{ color: "#E5E5E5", marginTop: 4 }}>{profile?.email}</Text>
-            </View>
-          </LinearGradient>
-
-          {/* Profile Stats */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 16 }}>
-            <ProfileStatCard label="Height" value={`${profile?.current_height || "0"} cm`} icon="fitness" />
-            <ProfileStatCard label="Weight" value={`${profile?.current_weight || "0"} kg`} icon="body" />
-            <ProfileStatCard label="Goal" value={profile?.goal || "N/A"} icon="trophy" />
-          </ScrollView>
-
-          {/* Profile Sections */}
-          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
-            <Text style={{ color: "#9CA3AF", marginBottom: 8 }}>Account</Text>
-            <ProfileMenuItem
-              icon="person"
-              title="Personal Information"
-              onPress={() => router.replace("/(screen)/profile")}
-            />
-            <ProfileMenuItem icon="stats-chart" title="Fitness Progress" onPress={() => router.replace("/(screen)/progress")} />
-          </View>
-
-          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
-            <Text style={{ color: "#9CA3AF", marginBottom: 8 }}>Settings</Text>
-            <ProfileMenuItem icon="lock-closed" title="Privacy" onPress={() =>  router.replace("/(screen)/privacy")} />
-            <ProfileMenuItem icon="help-circle" title="About the Devs " onPress={() =>  router.replace("/(screen)/about")} />  
-          </View>
-
-          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={{
-                backgroundColor: "#4F46E5",
-                borderRadius: 15,
-                padding: 16,
-                margin: 16,
-                alignItems: "center",
-              }}
+            <LinearGradient
+              colors={['rgba(15, 15, 20, 0)', 'rgba(15, 15, 20, 0.8)', 'rgba(15, 15, 20, 1)']}
+              className="h-full p-6 justify-end"
             >
-              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+              {/* Profile Header */}
+              <StyledView className="flex-row items-center justify-between mb-6">
+                <StyledView>
+                  <StyledText className="text-white/70 text-lg mb-1">
+                    Welcome back
+                  </StyledText>
+                  <StyledText className="text-white font-bold text-3xl">
+                    {profile?.name || "Anonymous User"}
+                  </StyledText>
+                </StyledView>
+                <StyledView className="bg-black/30 p-6 rounded-3xl">
+                  <Ionicons name="person" size={48} color="#FFFFFF" />
+                </StyledView>
+              </StyledView>
+
+              {/* Stats Row */}
+              <StyledView className="flex-row items-center flex-wrap gap-2">
+                <StyledView className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+                  <Ionicons name="body-outline" size={16} color="#FFFFFF" />
+                  <StyledText className="text-white ml-1">
+                    {profile?.current_weight || "0"} kg
+                  </StyledText>
+                </StyledView>
+                <StyledView className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+                  <Ionicons name="resize-outline" size={16} color="#FFFFFF" />
+                  <StyledText className="text-white ml-1">
+                    {profile?.current_height || "0"} cm
+                  </StyledText>
+                </StyledView>
+                <StyledView className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+                  <Ionicons name="trophy-outline" size={16} color="#FFFFFF" />
+                  <StyledText className="text-white ml-1">
+                    {profile?.goal || "No Goal"}
+                  </StyledText>
+                </StyledView>
+              </StyledView>
+            </LinearGradient>
+          </StyledLinearGradient>
+
+          {/* Main Content */}
+          <StyledView className="px-4 -mt-8">
+            {/* Profile Card */}
+            <StyledView className="bg-[#1F1F28] p-4 rounded-2xl shadow-lg border border-gray-800/50 mb-6">
+              <StyledView className="flex-row items-center mb-4">
+                <StyledView className="bg-[#2C2C3E] p-3 rounded-full mr-4">
+                  <Ionicons name="mail-outline" size={20} color="#4F46E5" />
+                </StyledView>
+                <StyledView>
+                  <StyledText className="text-[#9CA3AF] text-sm">Email</StyledText>
+                  <StyledText className="text-white">{profile?.email}</StyledText>
+                </StyledView>
+              </StyledView>
+
+              <StyledView className="flex-row items-center">
+                <StyledView className="bg-[#2C2C3E] p-3 rounded-full mr-4">
+                  <Ionicons name="trophy-outline" size={20} color="#4F46E5" />
+                </StyledView>
+                <StyledView>
+                  <StyledText className="text-[#9CA3AF] text-sm">Goal</StyledText>
+                  <StyledText className="text-white">{profile?.goal || "Not set"}</StyledText>
+                </StyledView>
+              </StyledView>
+            </StyledView>
+
+            {/* Menu Sections */}
+            <StyledText className="text-white text-xl font-bold mb-4">
+              Settings
+            </StyledText>
+
+            {/* Account Settings */}
+            <StyledView className="bg-[#1F1F28] rounded-2xl mb-4">
+              <StyledTouchableOpacity 
+                className="p-4 flex-row items-center justify-between border-b border-gray-800"
+                onPress={() => router.replace("/(screen)/profile")}
+              >
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-xl mr-3">
+                    <Ionicons name="person-outline" size={20} color="#4F46E5" />
+                  </StyledView>
+                  <StyledText className="text-white">Personal Information</StyledText>
+                </StyledView>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </StyledTouchableOpacity>
+
+              <StyledTouchableOpacity 
+                className="p-4 flex-row items-center justify-between"
+                onPress={() => router.replace("/(screen)/progress")}
+              >
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-xl mr-3">
+                    <Ionicons name="stats-chart" size={20} color="#4F46E5" />
+                  </StyledView>
+                  <StyledText className="text-white">Fitness Progress</StyledText>
+                </StyledView>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </StyledTouchableOpacity>
+            </StyledView>
+
+            {/* Other Settings */}
+            <StyledView className="bg-[#1F1F28] rounded-2xl mb-6">
+              <StyledTouchableOpacity 
+                className="p-4 flex-row items-center justify-between border-b border-gray-800"
+                onPress={() => router.replace("/(screen)/privacy")}
+              >
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-xl mr-3">
+                    <Ionicons name="lock-closed-outline" size={20} color="#4F46E5" />
+                  </StyledView>
+                  <StyledText className="text-white">Privacy Settings</StyledText>
+                </StyledView>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </StyledTouchableOpacity>
+
+              <StyledTouchableOpacity 
+                className="p-4 flex-row items-center justify-between"
+                onPress={() => router.replace("/(screen)/about")}
+              >
+                <StyledView className="flex-row items-center">
+                  <StyledView className="bg-[#2C2C3E] p-2 rounded-xl mr-3">
+                    <Ionicons name="information-circle-outline" size={20} color="#4F46E5" />
+                  </StyledView>
+                  <StyledText className="text-white">About the Devs</StyledText>
+                </StyledView>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </StyledTouchableOpacity>
+            </StyledView>
+
+            {/* Logout Button */}
+            <StyledTouchableOpacity
+              onPress={handleLogout}
+              className="bg-[#1F1F28] p-4 rounded-2xl flex-row items-center justify-center mb-8 mb-20"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#FF4545" />
+              <StyledText className="text-[#FF4545] font-semibold ml-2">
                 Logout
-              </Text>
-            </TouchableOpacity>
-          </View>
+              </StyledText>
+            </StyledTouchableOpacity>
+          </StyledView>
         </ScrollView>
       </SafeAreaView>
-    </View>
+    </StyledView>
   );
 };
 

@@ -94,23 +94,6 @@ CREATE TABLE exercises (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Automatically log when a workout is created
-CREATE OR REPLACE FUNCTION log_workout_creation()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO activity_log (user_id, action, timestamp)
-    VALUES (NEW.workout_id, 'Workout Created', CURRENT_TIMESTAMP);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER workout_creation_log
-AFTER INSERT ON workouts
-FOR EACH ROW
-EXECUTE FUNCTION log_workout_creation();
-
-
-
 CREATE TABLE meals (
     meal_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
@@ -224,23 +207,12 @@ AFTER UPDATE ON user_profiles
 FOR EACH ROW
 EXECUTE FUNCTION log_user_profile_changes();
 
-CREATE TABLE workout_plans (
-    plan_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE workout_plan_workouts (
-    plan_workout_id SERIAL PRIMARY KEY,
-    plan_id INTEGER REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
-    workout_id INTEGER REFERENCES workouts(workout_id) ON DELETE CASCADE
-);
 
 CREATE TABLE user_workout_plans (
     user_plan_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(userid) ON DELETE CASCADE,
-    plan_id INTEGER REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
+    workout_id INTEGER REFERENCES workouts(workout_id) ON DELETE CASCADE,
+    description TEXT,
     start_date DATE NOT NULL,
     end_date DATE,
     is_active BOOLEAN DEFAULT TRUE,
@@ -266,3 +238,91 @@ CREATE TABLE user_exercise_logs (
     weight_used NUMERIC(6,2), -- Optional, e.g., in kg or lbs
     notes TEXT
 );
+
+
+INSERT INTO workouts (name, category, duration, difficulty, calories_burned)
+VALUES 
+('Morning Yoga', 'Flexibility', 30, 'Beginner', 150.50),
+('HIIT Session', 'Cardio', 45, 'Advanced', 500.00),
+('Strength Training', 'Strength', 60, 'Intermediate', 400.00),
+('Cycling', 'Endurance', 90, 'Intermediate', 750.25),
+('Pilates Core', 'Core', 40, 'Beginner', 200.75),
+('Trail Run', 'Outdoor', 120, 'Advanced', 900.00),
+('Zumba Dance', 'Cardio', 50, 'Beginner', 350.50),
+('CrossFit WOD', 'CrossFit', 60, 'Advanced', 600.00),
+('Swimming Laps', 'Endurance', 45, 'Intermediate', 500.00),
+('Boxing Workout', 'Strength', 60, 'Intermediate', 550.25),
+('Power Yoga', 'Flexibility', 35, 'Intermediate', 180.75),
+('Rowing Machine', 'Cardio', 40, 'Intermediate', 300.00),
+('Rock Climbing', 'Outdoor', 90, 'Advanced', 800.50),
+('Barre Workout', 'Flexibility', 50, 'Beginner', 250.00),
+('Sprint Intervals', 'Cardio', 20, 'Advanced', 400.00),
+('Hiking', 'Outdoor', 180, 'Intermediate', 1200.75),
+('Bodyweight Circuit', 'Strength', 30, 'Beginner', 250.00),
+('Functional Fitness', 'CrossFit', 60, 'Intermediate', 550.00),
+('Aqua Aerobics', 'Endurance', 45, 'Beginner', 300.25),
+('Kickboxing', 'Cardio', 60, 'Advanced', 700.00);
+
+
+INSERT INTO exercises (workout_id, name, muscle_group, sets, reps)
+VALUES 
+(1, 'Downward Dog', 'Full Body', 3, 10),
+(1, 'Warrior Pose', 'Legs', 3, 8),
+(1, 'Tree Pose', 'Core', 3, 10),
+(2, 'Burpees', 'Full Body', 5, 12),
+(2, 'Mountain Climbers', 'Core', 4, 20),
+(2, 'Jump Squats', 'Legs', 4, 15),
+(3, 'Bench Press', 'Chest', 4, 10),
+(3, 'Bicep Curls', 'Arms', 4, 12),
+(3, 'Shoulder Press', 'Shoulders', 3, 10),
+(4, 'Cycling Warm-Up', 'Legs', 1, 5),
+(4, 'Endurance Sprints', 'Cardio', 3, 12),
+(4, 'Cool Down Pedaling', 'Legs', 2, 10),
+(5, 'Roll-Ups', 'Core', 4, 12),
+(5, 'Side-Lying Leg Circles', 'Legs', 3, 15),
+(5, 'Plank Hold', 'Core', 3, 30),
+(6, 'Hill Sprints', 'Legs', 5, 8),
+(6, 'Trail Jogging', 'Cardio', 1, 20),
+(6, 'Lunges', 'Legs', 3, 12),
+(7, 'Step Touch', 'Full Body', 3, 15),
+(7, 'Grapevine Steps', 'Legs', 4, 12),
+(7, 'Hip Rolls', 'Core', 3, 10),
+(8, 'Deadlifts', 'Back', 4, 10),
+(8, 'Kettlebell Swings', 'Core', 3, 15),
+(8, 'Box Jumps', 'Legs', 5, 12),
+(9, 'Front Crawl', 'Full Body', 4, 20),
+(9, 'Butterfly Stroke', 'Arms', 3, 15),
+(9, 'Treading Water', 'Legs', 2, 10),
+(10, 'Jab-Cross Combo', 'Arms', 5, 20),
+(10, 'Uppercuts', 'Arms', 4, 15),
+(10, 'Hooks', 'Shoulders', 4, 12),
+(11, 'Sun Salutations', 'Full Body', 3, 10),
+(11, 'Chair Pose', 'Legs', 3, 12),
+(11, 'Cobra Stretch', 'Back', 3, 8),
+(12, 'Rowing Intervals', 'Back', 5, 12),
+(12, 'High Knees', 'Legs', 4, 20),
+(12, 'Cool Down Stretch', 'Full Body', 3, 10),
+(13, 'Top Rope Climbing', 'Arms', 4, 10),
+(13, 'Bouldering', 'Full Body', 3, 12),
+(13, 'Grip Strengthening', 'Arms', 3, 15),
+(14, 'Barre Squats', 'Legs', 4, 12),
+(14, 'Arm Pulses', 'Arms', 3, 20),
+(14, 'Calf Raises', 'Legs', 3, 15),
+(15, 'Sprint Intervals', 'Legs', 6, 10),
+(15, 'Speed Skaters', 'Legs', 4, 15),
+(15, 'Cool Down Walk', 'Full Body', 1, 10),
+(16, 'Uphill Trek', 'Legs', 1, 60),
+(16, 'Trail Planks', 'Core', 3, 10),
+(16, 'Cool Down Stretch', 'Full Body', 2, 10),
+(17, 'Push-Ups', 'Chest', 4, 15),
+(17, 'Tricep Dips', 'Arms', 3, 12),
+(17, 'Jumping Jacks', 'Cardio', 4, 20),
+(18, 'Medicine Ball Slams', 'Core', 3, 12),
+(18, 'Pull-Ups', 'Back', 4, 8),
+(18, 'Plank Rows', 'Core', 3, 10),
+(19, 'Water Jogging', 'Legs', 4, 12),
+(19, 'Flutter Kicks', 'Core', 3, 15),
+(19, 'Aqua Push-Ups', 'Arms', 3, 10),
+(20, 'Power Punches', 'Arms', 4, 15),
+(20, 'Lunges with Twists', 'Legs', 3, 12),
+(20, 'Jump Ropes', 'Cardio', 5, 20);

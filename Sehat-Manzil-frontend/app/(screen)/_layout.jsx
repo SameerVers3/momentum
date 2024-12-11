@@ -9,6 +9,8 @@ const Screens = () => {
         <Stack.Screen name='about' options={{headerShown:false}}/>
         <Stack.Screen name='profile' options={{headerShown:false}}/>
         <Stack.Screen name='progress' options={{headerShown:false}}/>
+        <Stack.Screen name='workout-detail' options={{headerShown:false}}/>
+        <Stack.Screen name='log-workout' options={{headerShown:false}}/>
     </Stack>
   )
 }

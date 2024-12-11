@@ -11,20 +11,22 @@ const mealSchema = z.object({
   calories: z.number().nonnegative('Calories must be a non-negative number'),
   protein: z.number().nonnegative('Protein must be a non-negative number').optional(),
   carbs: z.number().nonnegative('Carbs must be a non-negative number').optional(),
-  fats: z.number().nonnegative('Fats must be a non-negative number').optional(),
-  mealTime: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Snack']),
+  fat: z.number().nonnegative('Fat must be a non-negative number').optional(),
+  mealType: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Snack']),
 });
 
 // Create a new meal
 export const createMeal = async (req, res) => {
+  console.log('createMeal called with body:', req.body);
   try {
     const { userId } = req.user; // Assuming user is authenticated
     const parsedData = mealSchema.parse(req.body);
+    console.log('Parsed meal data:', parsedData);
 
     const client = await pool.connect();
     try {
       const { rows } = await client.query(`
-        INSERT INTO meals (user_id, name, calories, protein, carbs, fats, meal_time)
+        INSERT INTO meals (user_id, name, calories, protein, carbs, fat, meal_type)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *;
       `, [
@@ -33,10 +35,11 @@ export const createMeal = async (req, res) => {
         parsedData.calories,
         parsedData.protein || 0,
         parsedData.carbs || 0,
-        parsedData.fats || 0,
-        parsedData.mealTime,
+        parsedData.fat || 0,
+        parsedData.mealType,
       ]);
 
+      console.log('Meal created:', rows[0]);
       res.status(201).json({ message: 'Meal created successfully', meal: rows[0] });
     } finally {
       client.release();
@@ -49,6 +52,7 @@ export const createMeal = async (req, res) => {
 
 // Get all meals for a user
 export const getMeals = async (req, res) => {
+  console.log('getMeals called');
   try {
     const { userId } = req.user;
     const client = await pool.connect();
@@ -57,6 +61,7 @@ export const getMeals = async (req, res) => {
         SELECT * FROM meals WHERE user_id = $1;
       `, [userId]);
 
+      console.log('Meals fetched:', rows);
       res.status(200).json({ meals: rows });
     } finally {
       client.release();
@@ -69,32 +74,36 @@ export const getMeals = async (req, res) => {
 
 // Update a meal
 export const updateMeal = async (req, res) => {
+  console.log('updateMeal called with params:', req.params, 'and body:', req.body);
   try {
     const { mealId } = req.params;
     const parsedData = mealSchema.parse(req.body);
+    console.log('Parsed meal data:', parsedData);
 
     const client = await pool.connect();
     try {
       const { rows } = await client.query(`
         UPDATE meals
-        SET name = $1, calories = $2, protein = $3, carbs = $4, fats = $5, meal_time = $6
-        WHERE id = $7 AND user_id = $8
+        SET name = $1, calories = $2, protein = $3, carbs = $4, fat = $5, meal_type = $6
+        WHERE meal_id = $7 AND user_id = $8
         RETURNING *;
       `, [
         parsedData.name,
         parsedData.calories,
         parsedData.protein || 0,
         parsedData.carbs || 0,
-        parsedData.fats || 0,
-        parsedData.mealTime,
+        parsedData.fat || 0,
+        parsedData.mealType,
         mealId,
         req.user.userId, // Ensure only the owner can update
       ]);
 
       if (rows.length === 0) {
+        console.log('Meal not found or unauthorized');
         return res.status(404).json({ error: 'Meal not found or unauthorized' });
       }
 
+      console.log('Meal updated:', rows[0]);
       res.status(200).json({ message: 'Meal updated successfully', meal: rows[0] });
     } finally {
       client.release();
@@ -107,19 +116,22 @@ export const updateMeal = async (req, res) => {
 
 // Delete a meal
 export const deleteMeal = async (req, res) => {
+  console.log('deleteMeal called with params:', req.params);
   try {
     const { mealId } = req.params;
 
     const client = await pool.connect();
     try {
       const { rowCount } = await client.query(`
-        DELETE FROM meals WHERE id = $1 AND user_id = $2;
+        DELETE FROM meals WHERE meal_id = $1 AND user_id = $2;
       `, [mealId, req.user.userId]);
 
       if (rowCount === 0) {
+        console.log('Meal not found or unauthorized');
         return res.status(404).json({ error: 'Meal not found or unauthorized' });
       }
 
+      console.log('Meal deleted successfully');
       res.status(200).json({ message: 'Meal deleted successfully' });
     } finally {
       client.release();

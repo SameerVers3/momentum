@@ -104,7 +104,9 @@ export const isAdminAuthenticated = async (req, res, next) => {
         });
       }
 
-      const { userId, role } = decoded;
+      console.log('Decoded token:', decoded);
+
+      const { userid, role } = decoded;
       
       if (role !== 'admin') {
         return res.status(403).json({ 
@@ -117,8 +119,8 @@ export const isAdminAuthenticated = async (req, res, next) => {
 
       try {
         const { rows } = await client.query(
-          'SELECT * status FROM users WHERE userid = $1',
-          [userId]
+          'SELECT * FROM users WHERE userid = $1',
+          [userid]
         );
 
         if (rows.length === 0) {

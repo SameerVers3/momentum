@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,375 +9,511 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  TextInput,
+  RefreshControl,
   Modal,
-  TextInput
 } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import * as Animatable from "react-native-animatable";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from 'expo-router';
+import { router } from "expo-router";
+import { styled } from "nativewind";
+import WorkoutMenuItem from "../../components/WorkoutMenuItem";
 
-const { width } = Dimensions.get("window");
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledLinearGradient = styled(LinearGradient);
 
 const ExercisePage = () => {
-  const [exercises, setExercises] = useState([]);
-  const [workouts, setWorkouts] = useState([]); // State for workouts
+  // State for workouts and filtering
+  const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [workoutModalVisible, setWorkoutModalVisible] = useState(false); // Workout modal visibility
-  const [exercise, setExercise] = useState({
-    name: "",
-    muscle_group: "",
-    sets: 1,
-    reps: 1,
-    workout_id: "",
-  });
-  const [searchText, setSearchText] = useState(""); // Added state for search bar
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Search and filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  
+  // Filter options
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState([]);
+  const [minDuration, setMinDuration] = useState(0);
+  const [maxDuration, setMaxDuration] = useState(120);
+  const [minCalories, setMinCalories] = useState(0);
+  const [maxCalories, setMaxCalories] = useState(1000);
+  const [sortBy, setSortBy] = useState(null);
 
-  useEffect(() => {
-    fetchExercises();
-    fetchWorkouts(); // Fetch workouts when the component mounts
-  }, []);
+  // Predefined filter options
+  const CATEGORIES = ["Cardio", "Strength", "Flexibility", "HIIT", "Yoga"];
+  const DIFFICULTIES = ["Easy", "Medium", "Hard"];
+  const SORT_OPTIONS = [
+    { label: "Newest", value: "newest" },
+    { label: "Calories Burned", value: "calories" },
+    { label: "Duration", value: "duration" },
+  ];
 
-  const fetchExercises = async () => {
+  // Fetch workouts
+  const fetchWorkouts = async () => {
     try {
       const authToken = await AsyncStorage.getItem("userToken");
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/exercise/`,
+        `${process.env.EXPO_PUBLIC_BACKEND_URL}/workout/`,
         {
           headers: { Authorization: `Bearer ${authToken}` },
         }
       );
-      setExercises(Array.isArray(response.data.exercises) ? response.data.exercises : []);
+
+      setWorkouts(response.data.workouts || []);
     } catch (error) {
-      Alert.alert("Error", "Could not fetch exercises");
+      Alert.alert("Error", "Could not fetch workouts");
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchWorkouts = async () => {
-    try {
-      const authToken = await AsyncStorage.getItem("userToken");
-      const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/workouts/`, // Assuming this is the endpoint for workouts
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
+
+  // Memoized and filtered workouts
+  const filteredWorkouts = useMemo(() => {
+    let result = workouts;
+
+    // Text search
+    if (searchText) {
+      result = result.filter(workout => 
+        workout.name.toLowerCase().includes(searchText.toLowerCase())
       );
-      setWorkouts(response.data.workouts || []);
-    } catch (error) {
-      Alert.alert("Error", "Could not fetch workouts");
     }
-  };
 
-  const handleExerciseSubmit = async () => {
-    if (!exercise.name || !exercise.workout_id) {
-      Alert.alert("Error", "Name and workout ID are required.");
-      return;
-    }
-    try {
-      const authToken = await AsyncStorage.getItem("userToken");
-      await axios.post(
-        `${process.env.EXPO_PUBLIC_BACKEND_URL}/exercises/create`,
-        exercise,
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
+    // Category filter
+    if (selectedCategories.length > 0) {
+      result = result.filter(workout => 
+        selectedCategories.includes(workout.category)
       );
-      Alert.alert("Success", "Exercise created successfully");
-      fetchExercises(); // Refresh exercise list
-      setModalVisible(false);
-    } catch (error) {
-      Alert.alert("Error", "Failed to create exercise");
     }
+
+    // Difficulty filter
+    if (selectedDifficulties.length > 0) {
+      result = result.filter(workout => 
+        selectedDifficulties.includes(workout.difficulty)
+      );
+    }
+
+    // Duration filter
+    result = result.filter(workout => 
+      workout.duration >= minDuration && workout.duration <= maxDuration
+    );
+
+    // Calories filter
+    result = result.filter(workout => {
+      const calories = parseFloat(workout.calories_burned);
+      return calories >= minCalories && calories <= maxCalories;
+    });
+
+    // Sorting
+    switch (sortBy) {
+      case "newest":
+        result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case "calories":
+        result.sort((a, b) => parseFloat(b.calories_burned) - parseFloat(a.calories_burned));
+        break;
+      case "duration":
+        result.sort((a, b) => b.duration - a.duration);
+        break;
+    }
+
+    return result;
+  }, [workouts, searchText, selectedCategories, 
+      selectedDifficulties, minDuration, maxDuration, 
+      minCalories, maxCalories, sortBy]);
+
+  // Refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchWorkouts();
+    setRefreshing(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem("userToken");
-      router.replace("/(auth)/Login");
-    } catch (error) {
-      Alert.alert("Error", "Failed to log out");
-    }
+  // Category toggle handler
+  const toggleCategory = (category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
   };
 
-  const filteredExercises = exercises.filter(exercise =>
-    exercise.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    exercise.muscle_group.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // Difficulty toggle handler
+  const toggleDifficulty = (difficulty) => {
+    setSelectedDifficulties(prev => 
+      prev.includes(difficulty)
+        ? prev.filter(d => d !== difficulty)
+        : [...prev, difficulty]
+    );
+  };
 
-  const ExerciseStatCard = ({ label, value, icon }) => (
-    <Animatable.View
-      animation="fadeInUp"
-      duration={800}
-      style={{
-        backgroundColor: "#1F1F28",
-        borderRadius: 15,
-        padding: 16,
-        alignItems: "center",
-        marginHorizontal: 10,
-        width: width * 0.3,
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 4 },
-      }}
+  // Reset filters
+  const resetFilters = () => {
+    setSelectedCategories([]);
+    setSelectedDifficulties([]);
+    setMinDuration(0);
+    setMaxDuration(120);
+    setMinCalories(0);
+    setMaxCalories(1000);
+    setSortBy(null);
+    setSearchText("");
+  };
+
+  // Navigate to workout detail
+  const navigateToWorkoutDetail = (workout) => {
+    router.push({
+      pathname: "/(screen)/workout-detail",
+      params: {
+        workout: JSON.stringify({ 
+          workoutId: workout.workout_id,
+          name: workout.name,
+          category: workout.category,
+          duration: workout.duration,
+          difficulty: workout.difficulty,
+          caloriesBurned: workout.calories_burned
+        })
+      }
+    });
+  };
+
+  // Filter Modal Component
+  const FilterModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={filterModalVisible}
+      onRequestClose={() => setFilterModalVisible(false)}
     >
-      <Ionicons name={icon} size={28} color="#4F46E5" />
-      <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 18, marginTop: 8 }}>{value}</Text>
-      <Text style={{ color: "#9CA3AF", fontSize: 12 }}>{label}</Text>
-    </Animatable.View>
+      <StyledView className="flex-1 justify-end bg-black bg-opacity-50">
+        <StyledView className="bg-[#1F1F28] rounded-t-3xl p-6">
+          {/* Categories Filter */}
+          <StyledText className="text-white text-lg font-bold mb-4">Categories</StyledText>
+          <StyledView className="flex-row flex-wrap mb-4">
+            {CATEGORIES.map(category => (
+              <TouchableOpacity 
+                key={category}
+                onPress={() => toggleCategory(category)}
+                className={`
+                  p-2 m-1 rounded-full
+                  ${selectedCategories.includes(category) 
+                    ? 'bg-[#4F46E5]' 
+                    : 'bg-[#2C2C3E]'}
+                `}
+              >
+                <StyledText className="text-white">{category}</StyledText>
+              </TouchableOpacity>
+            ))}
+          </StyledView>
+
+          {/* Difficulty Filter */}
+          <StyledText className="text-white text-lg font-bold mb-4">Difficulty</StyledText>
+          <StyledView className="flex-row mb-4">
+            {DIFFICULTIES.map(difficulty => (
+              <TouchableOpacity 
+                key={difficulty}
+                onPress={() => toggleDifficulty(difficulty)}
+                className={`
+                  p-2 m-1 rounded-full
+                  ${selectedDifficulties.includes(difficulty) 
+                    ? 'bg-[#4F46E5]' 
+                    : 'bg-[#2C2C3E]'}
+                `}
+              >
+                <StyledText className="text-white">{difficulty}</StyledText>
+              </TouchableOpacity>
+            ))}
+          </StyledView>
+
+          {/* Duration Filter */}
+          <StyledText className="text-white text-lg font-bold mb-4">Duration (minutes)</StyledText>
+          <StyledView className="flex-row justify-between mb-4">
+            <TextInput
+              className="bg-[#2C2C3E] text-white p-2 rounded-lg w-20"
+              placeholder="Min"
+              keyboardType="numeric"
+              value={minDuration.toString()}
+              onChangeText={(text) => setMinDuration(Number(text))}
+            />
+            <TextInput
+              className="bg-[#2C2C3E] text-white p-2 rounded-lg w-20"
+              placeholder="Max"
+              keyboardType="numeric"
+              value={maxDuration.toString()}
+              onChangeText={(text) => setMaxDuration(Number(text))}
+            />
+          </StyledView>
+
+          {/* Calories Range Filter */}
+          <StyledText className="text-white text-lg font-bold mb-4">Calories Burned</StyledText>
+          <StyledView className="flex-row justify-between items-center mb-4">
+            <StyledView className="flex-row items-center">
+              <TextInput
+                className="bg-[#2C2C3E] text-white p-2 rounded-lg w-20 mr-2"
+                placeholder="Min"
+                keyboardType="numeric"
+                value={minCalories.toString()}
+                onChangeText={(text) => setMinCalories(Number(text))}
+              />
+              <StyledText className="text-white">-</StyledText>
+              <TextInput
+                className="bg-[#2C2C3E] text-white p-2 rounded-lg w-20 ml-2"
+                placeholder="Max"
+                keyboardType="numeric"
+                value={maxCalories.toString()}
+                onChangeText={(text) => setMaxCalories(Number(text))}
+              />
+            </StyledView>
+            <StyledText className="text-[#9CA3AF]">Calories</StyledText>
+          </StyledView>
+
+          {/* Sorting */}
+          <StyledText className="text-white text-lg font-bold mb-4">Sort By</StyledText>
+          <StyledView className="flex-row mb-4">
+            {SORT_OPTIONS.map(option => (
+              <TouchableOpacity 
+                key={option.value}
+                onPress={() => setSortBy(option.value)}
+                className={`
+                  p-2 m-1 rounded-full
+                  ${sortBy === option.value 
+                    ? 'bg-[#4F46E5]' 
+                    : 'bg-[#2C2C3E]'}
+                `}
+              >
+                <StyledText className="text-white">{option.label}</StyledText>
+              </TouchableOpacity>
+            ))}
+          </StyledView>
+
+          {/* Action Buttons */}
+          <StyledView className="flex-row justify-between">
+            <TouchableOpacity 
+              onPress={resetFilters}
+              className="bg-[#2C2C3E] p-3 rounded-lg flex-1 mr-2"
+            >
+              <StyledText className="text-white text-center">Reset</StyledText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setFilterModalVisible(false)}
+              className="bg-[#4F46E5] p-3 rounded-lg flex-1 ml-2"
+            >
+              <StyledText className="text-white text-center">Apply</StyledText>
+            </TouchableOpacity>
+          </StyledView>
+        </StyledView>
+      </StyledView>
+    </Modal>
   );
 
-  const ExerciseMenuItem = ({ title, onPress }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#1F1F28",
-        borderRadius: 15,
-        padding: 16,
-        marginBottom: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 4 },
-      }}
-    >
-      <Ionicons name="fitness" size={24} color="#4F46E5" />
-      <Text style={{ color: "#fff", marginLeft: 16, flex: 1 }}>{title}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-    </TouchableOpacity>
-  );
-
+  // Render loading state
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0F0F14", alignItems: "center", justifyContent: "center" }}>
+      <StyledView className="flex-1 bg-[#0F0F14] items-center justify-center">
         <ActivityIndicator size="large" color="#4F46E5" />
-      </View>
+      </StyledView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0F0F14" }}>
+    <StyledView className="flex-1 bg-[#0F0F14]">
       <StatusBar barStyle="light-content" />
-      <SafeAreaView className="mb-16">
-        <ScrollView>
-          {/* Profile Header */}
-          <LinearGradient
-            colors={["#4F46E5", "#302F4E"]}
+      <SafeAreaView className="flex-1">
+        <ScrollView
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh} 
+              tintColor="#4F46E5" 
+            />
+          }
+          className="flex-1"
+        >
+          {/* Hero Section */}
+          <StyledLinearGradient
+            colors={getWorkoutGradient('strength')}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{
-              alignItems: "center",
-              paddingVertical: 40,
-              borderBottomLeftRadius: 40,
-              borderBottomRightRadius: 40,
-            }}
+            className="h-[300px] relative"
           >
-            <View style={{ alignItems: "center" }}>
-              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 24 }}>
-                Exercise Page
-              </Text>
-            </View>
-          </LinearGradient>
-
-          {/* Search Bar */}
-          <View style={{ marginTop: 16, marginHorizontal: 16 }}>
-            <TextInput
-              style={{
-                backgroundColor: "#1F1F28",
-                color: "#fff",
-                padding: 12,
-                borderRadius: 8,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-              placeholder="Search exercises..."
-              placeholderTextColor="#9CA3AF"
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-          </View>
-
-          {/* Exercise Menu */}
-          <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
-            <Text style={{ color: "#9CA3AF", marginBottom: 8 }}>Exercise Management</Text>
-            <ExerciseMenuItem
-              title="Add New Exercise"
-              onPress={() => setModalVisible(true)}
-            />
-            {/* Other menu items can be added here */}
-          </View>
-
-        </ScrollView>
-      </SafeAreaView>
-
-      {/* Floating Button */}
-      <TouchableOpacity
-        onPress={() => setModalVisible(true)}
-        style={{
-          position: "absolute",
-          bottom: 100,
-          right: 30,
-          backgroundColor: "#4F46E5",
-          borderRadius: 50,
-          padding: 16,
-          shadowColor: "#000",
-          shadowOpacity: 0.2,
-          shadowOffset: { width: 0, height: 4 },
-        }}
-      >
-        <Ionicons name="add" size={30} color="#fff" />
-      </TouchableOpacity>
-
-      {/* Modal for Adding New Exercise */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-opacity-70">
-          <View className="w-4/5 p-4 bg-transparent bg-gray-900 border border-gray-700 rounded-lg">
-            <Text className="text-xl font-bold text-white mb-4">Add New Exercise</Text>
-
-            <TextInput
-              className="border p-2 mb-4 rounded bg-transparent text-white"
-              placeholder="Exercise Name"
-              placeholderTextColor="#9CA3AF"
-              value={exercise.name}
-              onChangeText={(text) => setExercise({ ...exercise, name: text })}
-            />
-            <TextInput
-              className="border p-2 mb-4 rounded bg-transparent text-white"
-              placeholder="Muscle Group"
-              placeholderTextColor="#9CA3AF"
-              value={exercise.muscle_group}
-              onChangeText={(text) => setExercise({ ...exercise, muscle_group: text })}
-            />
-            <TextInput
-              className="border p-2 mb-4 rounded bg-transparent text-white"
-              placeholder="Sets"
-              placeholderTextColor="#9CA3AF"
-              value={exercise.sets.toString()}
-              onChangeText={(text) => setExercise({ ...exercise, sets: parseInt(text) })}
-              keyboardType="numeric"
-            />
-            <TextInput
-              className="border p-2 mb-4 rounded bg-transparent text-white"
-              placeholder="Reps"
-              placeholderTextColor="#9CA3AF"
-              value={exercise.reps.toString()}
-              onChangeText={(text) => setExercise({ ...exercise, reps: parseInt(text) })}
-              keyboardType="numeric"
-            />
-
-            {/* Workout Selection Button */}
-            <TouchableOpacity
-              onPress={() => setWorkoutModalVisible(true)} // Show workout modal
-              style={{
-                backgroundColor: "#4F46E5",
-                borderRadius: 15,
-                padding: 16,
-                alignItems: "center",
-                marginBottom: 8,
-              }}
+            <LinearGradient
+              colors={['rgba(15, 15, 20, 0)', 'rgba(15, 15, 20, 0.8)', 'rgba(15, 15, 20, 1)']}
+              className="h-full px-6 justify-end"
             >
-              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
-                Select Workout
-              </Text>
-            </TouchableOpacity>
+              {/* Title Section */}
+              <StyledView className="flex-row items-center justify-between mb-6">
+                <StyledView>
+                  <StyledText className="text-white/70 text-lg mb-1">
+                    Welcome back
+                  </StyledText>
+                  <StyledText className="text-white font-bold text-3xl">
+                    Workout Library
+                  </StyledText>
+                </StyledView>
+                <StyledView className="bg-black/30 p-6 rounded-3xl">
+                  <Ionicons name="fitness" size={48} color="#FFFFFF" />
+                </StyledView>
+              </StyledView>
 
-            {/* Save Exercise */}
-            <TouchableOpacity
-              onPress={handleExerciseSubmit}
-              style={{
-                backgroundColor: "#4F46E5",
-                borderRadius: 15,
-                padding: 16,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
-                Save Exercise
-              </Text>
-            </TouchableOpacity>
+              {/* Stats Row */}
+              <StyledView className="flex-row items-center flex-wrap gap-2">
+                <StyledView className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+                  <Ionicons name="calendar-outline" size={16} color="#FFFFFF" />
+                  <StyledText className="text-white ml-1">
+                    {workouts.length} Workouts
+                  </StyledText>
+                </StyledView>
+                <StyledView className="bg-black/30 px-3 py-1 rounded-full flex-row items-center">
+                  <Ionicons name="filter-outline" size={16} color="#FFFFFF" />
+                  <StyledText className="text-white ml-1">
+                    {selectedCategories.length} Filters
+                  </StyledText>
+                </StyledView>
+              </StyledView>
+            </LinearGradient>
+          </StyledLinearGradient>
 
-            {/* Cancel Button */}
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={{
-                backgroundColor: "#E5E5E5",
-                borderRadius: 15,
-                padding: 16,
-                alignItems: "center",
-                marginTop: 8,
-              }}
-            >
-              <Text style={{ color: "#000", fontWeight: "bold", fontSize: 16 }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Workout Selection Modal */}
-      <Modal
-        transparent={true}
-        visible={workoutModalVisible}
-        animationType="slide"
-        onRequestClose={() => setWorkoutModalVisible(false)}
-      >
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0, 0, 0, 0.7)" }}>
-          <View style={{
-            width: width * 0.8,
-            padding: 20,
-            backgroundColor: "#1F1F28",
-            borderRadius: 10,
-          }}>
-            <Text style={{ color: "#fff", fontSize: 20, marginBottom: 10, textAlign: "center" }}>Select Workout</Text>
-            <ScrollView>
-              {workouts.map((workout) => (
-                <TouchableOpacity
-                  key={workout.workout_id}
-                  style={{
-                    padding: 12,
-                    backgroundColor: "#302F4E",
-                    borderRadius: 8,
-                    marginBottom: 8,
-                  }}
-                  onPress={() => {
-                    setExercise({ ...exercise, workout_id: workout.workout_id });
-                    setWorkoutModalVisible(false);
-                  }}
+          {/* Search and Filter Section */}
+          <StyledView className="px-4 -mt-8">
+            <StyledView className="bg-[#1F1F28] p-3 rounded-2xl shadow-lg border border-gray-800/50">
+              <StyledView className="flex-row items-center mb-3">
+                <StyledView className="flex-1 flex-row items-center bg-[#2C2C3E] rounded-xl p-2 mr-2">
+                  <Ionicons name="search" size={20} color="#9CA3AF" style={{ marginLeft: 8 }} />
+                  <TextInput
+                    className="flex-1 text-white p-2 text-base ml-2"
+                    placeholder="Search workouts..."
+                    placeholderTextColor="#9CA3AF"
+                    value={searchText}
+                    onChangeText={setSearchText}
+                  />
+                </StyledView>
+                <TouchableOpacity 
+                  onPress={() => setFilterModalVisible(true)}
+                  className="bg-[#4F46E5] p-3 rounded-xl"
                 >
-                  <Text style={{ color: "#fff", fontSize: 16 }}>
-                    {workout.name}
-                  </Text>
+                  <Ionicons name="options" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              onPress={() => setWorkoutModalVisible(false)}
-              style={{
-                backgroundColor: "#4F46E5",
-                borderRadius: 15,
-                padding: 12,
-                alignItems: "center",
-                marginTop: 16,
-              }}
-            >
-              <Text style={{ color: "#fff", fontSize: 16 }}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+              </StyledView>
+
+              {/* Quick Filters */}
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                className="flex-row"
+              >
+                {CATEGORIES.map(category => (
+                  <TouchableOpacity
+                    key={category}
+                    onPress={() => toggleCategory(category)}
+                    className={`
+                      mr-2 px-4 py-2 rounded-xl flex-row items-center
+                      ${selectedCategories.includes(category) 
+                        ? 'bg-[#4F46E5]' 
+                        : 'bg-[#2C2C3E]'}
+                    `}
+                  >
+                    <Ionicons 
+                      name={getWorkoutIcon(category.toLowerCase())} 
+                      size={16} 
+                      color={selectedCategories.includes(category) ? '#FFFFFF' : '#9CA3AF'} 
+                    />
+                    <StyledText className={`ml-2 ${
+                      selectedCategories.includes(category) 
+                        ? 'text-white' 
+                        : 'text-[#9CA3AF]'
+                    }`}>
+                      {category}
+                    </StyledText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </StyledView>
+          </StyledView>
+
+          {/* Workouts List */}
+          <StyledView className="px-4 mt-6 mb-16">
+            {/* Section Header */}
+            <StyledView className="flex-row items-center justify-between mb-4">
+              <StyledText className="text-white text-xl font-bold">
+                Available Workouts
+              </StyledText>
+              <StyledText className="text-[#4F46E5]">
+                {filteredWorkouts.length} workouts
+              </StyledText>
+            </StyledView>
+
+            {filteredWorkouts.length > 0 ? (
+              filteredWorkouts.map((workout) => (
+                <WorkoutMenuItem 
+                  key={workout.workout_id} 
+                  workout={workout} 
+                  onPress={() => navigateToWorkoutDetail(workout)} 
+                />
+              ))
+            ) : (
+              <StyledView className="items-center justify-center py-12 bg-[#1F1F28] rounded-2xl">
+                <StyledView className="bg-[#2C2C3E] p-4 rounded-full mb-4">
+                  <Ionicons name="fitness-outline" size={32} color="#4F46E5" />
+                </StyledView>
+                <StyledText className="text-white text-lg font-semibold mb-1">
+                  No workouts found
+                </StyledText>
+                <StyledText className="text-[#9CA3AF] text-center px-6">
+                  Try adjusting your filters or search terms
+                </StyledText>
+              </StyledView>
+            )}
+          </StyledView>
+        </ScrollView>
+
+        {/* Filter Modal */}
+        <FilterModal />
+      </SafeAreaView>
+    </StyledView>
   );
+};
+
+// Helper function for workout icons
+const getWorkoutIcon = (category) => {
+  switch (category) {
+    case 'cardio':
+      return 'bicycle';
+    case 'strength':
+      return 'barbell';
+    case 'flexibility':
+      return 'body';
+    case 'hiit':
+      return 'flash';
+    case 'yoga':
+      return 'leaf';
+    default:
+      return 'fitness';
+  }
+};
+
+// Add this helper function at the top level
+const getWorkoutGradient = (category) => {
+  switch (category.toLowerCase()) {
+    case 'cardio':
+      return ['#FF6B6B', '#845EC2'];
+    case 'strength':
+      return ['#4D8076', '#2C73D2'];
+    case 'yoga':
+      return ['#FF9671', '#845EC2'];
+    case 'hiit':
+      return ['#F9F871', '#FF9671'];
+    default:
+      return ['#4F46E5', '#302F4E'];
+  }
 };
 
 export default ExercisePage;

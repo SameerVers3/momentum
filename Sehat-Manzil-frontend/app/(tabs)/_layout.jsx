@@ -10,12 +10,12 @@ const TabIcon = ({ name, color, focused }) => {
     <View
       className="flex justify-center items-center"
       style={{
-        width: 50, // Ensures consistent width for centering
-        height: 50, // Ensures consistent height for centering
+        width: 50,
+        height: 50,
       }}
     >
       <Ionicons
-        name={iconName} // Dynamically switch between filled and outline icons
+        name={iconName}
         size={28}
         color={color}
       />
@@ -28,24 +28,34 @@ const TabsLayout = () => {
     <Tabs
       screenOptions={{
         tabBarShowLabel: false,
-        tabBarActiveTintColor: "#8000FF",
-        tabBarInactiveTintColor: "#CDCDE0",
+        tabBarActiveTintColor: "#4F46E5",
+        tabBarInactiveTintColor: "#9CA3AF",
         tabBarStyle: {
-          backgroundColor: "#161622",
+          backgroundColor: "#1F1F28",
           paddingBottom: 10,
           paddingTop: 10,
           height: 64,
-          position: 'absolute', // Floating tab bar
+          position: 'absolute',
           left: 20,
           right: 20,
-          borderTopLeftRadius: 20, // Round only the top-left corner
-          borderTopRightRadius: 20, // Round only the top-right corner
-          display: 'flex', // Ensure tab bar behaves as a flex container
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          display: 'flex',
           justifyContent: 'center',
+          borderTopWidth: 0,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+          elevation: 5,
+          borderWidth: 1,
+          borderColor: "rgba(79, 70, 229, 0.1)",
         },
       }}
     >
-
       <Tabs.Screen
         name="home"
         options={{
@@ -53,7 +63,7 @@ const TabsLayout = () => {
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
-              name="home" // Base name of the icon
+              name="home"
               color={color}
               focused={focused}
             />
@@ -106,6 +116,21 @@ const TabsLayout = () => {
         }}
       />
 
+      <Tabs.Screen
+        name="workouts"
+        options={{
+          title: "workouts",
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              name="barbell"
+              color={color}
+              focused={focused}
+            />
+          ),
+        }}
+      />
+
       {/* Future Trainer Tab */}
       <Tabs.Screen
         name="trainer"
@@ -114,13 +139,13 @@ const TabsLayout = () => {
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
-              name="barbell" // Icon representing trainer/fitness
+              name="barbell"
               color={color}
               focused={focused}
             />
           ),
           tabBarStyle: {
-            display: 'none', // Hide this tab for now
+            display: 'none',
           },
         }}
       />
